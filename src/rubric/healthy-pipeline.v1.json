@@ -1,0 +1,58 @@
+{
+  "id": "healthy-pipeline",
+  "version": "1.0.0",
+  "name": "The Healthy Pipeline",
+  "source": "Default definitions from the Solution Selling tradition. TO VALIDATE against B2B Klubben course material (see issue: Rubric v1 validation).",
+  "staleness": {
+    "meetingsBeforeDecay": 2,
+    "decayBands": 1
+  },
+  "bands": [
+    { "min": 0, "max": 3, "label": "not_addressed", "description": "Dimension not meaningfully addressed, or no citable evidence exists." },
+    { "min": 4, "max": 6, "label": "touched_unverified", "description": "Raised in the meeting, but the evidence is seller-assumed; the customer did not confirm it in their own words." },
+    { "min": 7, "max": 8, "label": "established", "description": "Confirmed by the customer, directly and unambiguously." },
+    { "min": 9, "max": 10, "label": "customer_articulated", "description": "The customer articulated it unprompted or co-created it; strongest possible evidence." }
+  ],
+  "dimensions": [
+    {
+      "key": "pain",
+      "name": "Pain",
+      "definition": "The customer has articulated a concrete, admitted business problem in their own words, with consequences.",
+      "analysisGuidance": "Look for the customer describing a problem, its cost, or its consequences themselves. A seller stating the problem and the customer merely agreeing ('yes, exactly') is seller-assumed, not customer-stated. Note euphemistic or hedged Danish phrasing ('det er lidt en udfordring') as weaker evidence than concrete statements with numbers.",
+      "highExample": "Customer: 'We lose roughly two weeks per project on rework.'",
+      "lowExample": "Seller: 'So efficiency is the issue, right?' Customer: 'Mm.'"
+    },
+    {
+      "key": "power",
+      "name": "Power",
+      "definition": "We know who owns the budget and the decision, and we are either talking to them or have a credible, agreed path to them.",
+      "analysisGuidance": "Look for named roles and people, budget ownership, the decision process, and explicit requests for or grants of access to the economic buyer. A title alone is not power; confirmed decision authority is.",
+      "highExample": "Customer: 'The final call is mine, and I've set aside budget in Q1.'",
+      "lowExample": "No discussion of who decides or pays; seller assumes the contact person decides."
+    },
+    {
+      "key": "vision",
+      "name": "Vision",
+      "definition": "The customer holds a concrete vision of solving the problem with our capabilities — ideally one they helped build.",
+      "analysisGuidance": "Look for the customer describing a future state ('if we could X, then we would Y') connected to the seller's offering. Co-creation (customer extends or corrects the how) scores higher than passive acceptance of the seller's pitch.",
+      "highExample": "Customer: 'So if your model flags the risky projects each Monday, my team could reassign people the same week.'",
+      "lowExample": "Seller describes the solution; customer listens without engaging with the how."
+    },
+    {
+      "key": "value",
+      "name": "Value",
+      "definition": "The value is quantified and agreed by the customer — the cost of the pain and the worth of solving it — not merely claimed by the seller.",
+      "analysisGuidance": "Look for numbers: hours, money, risk, opportunity — and for who states them. Customer-stated or customer-confirmed quantification scores high; seller-claimed ROI with no customer confirmation stays in the unverified band.",
+      "highExample": "Customer: 'If that saves each PM two hours a week, that is easily half a million kroner a year for us.'",
+      "lowExample": "Seller: 'This typically pays for itself in three months.' No customer response."
+    },
+    {
+      "key": "control",
+      "name": "Control",
+      "definition": "The seller controls the process: a clear, mutually agreed next step with owners, dates, and a path to decision.",
+      "analysisGuidance": "Look at how the meeting ends. A scheduled next meeting with an agreed purpose, named participants, and dates scores high. 'Send me some material and we'll be in touch' with no commitment scores low. A mutual action plan or agreed decision timeline is the strongest evidence.",
+      "highExample": "Agreed: workshop on the 14th with the CFO present; customer sends current process docs before then.",
+      "lowExample": "Seller: 'I'll send a proposal.' Customer: 'Great, thanks.' Nothing scheduled."
+    }
+  ]
+}

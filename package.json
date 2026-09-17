@@ -1,0 +1,18 @@
+{
+  "name": "healthy-pipeline-coach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private AI sales coach scoring customer meetings against The Healthy Pipeline framework (Pain, Power, Vision, Value, Control)",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
