@@ -29,9 +29,15 @@ describe("provider factory", () => {
     expect(() => createProvider()).toThrow(/ANTHROPIC_API_KEY/);
   });
 
-  it("constructs the anthropic provider when a key is present", () => {
+  it("defaults to the REDACTED anthropic engine when a key is present", () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     const p = createProvider("anthropic");
+    expect(p.id).toMatch(/^redacted\(anthropic:/);
+  });
+
+  it("offers the raw engine only as an explicit opt-out", () => {
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    const p = createProvider("anthropic-raw");
     expect(p.id).toMatch(/^anthropic:/);
   });
 });

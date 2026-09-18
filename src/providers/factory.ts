@@ -1,5 +1,6 @@
 import type { AnalysisProvider } from "./types.js";
 import { AnthropicProvider } from "./anthropic.js";
+import { RedactingProvider } from "./redacting.js";
 
 /**
  * Provider factory (issue #2, brief §6 model strategy): the app depends only
@@ -35,4 +36,18 @@ export function createProvider(name?: string): AnalysisProvider {
 
 // Built-in engines. Construction is lazy: a missing ANTHROPIC_API_KEY only
 // fails when the Anthropic provider is actually selected.
-registerProvider("anthropic", () => new AnthropicProvider());
+//
+// PRIVACY DEFAULT: "anthropic" is the REDACTED engine — person names,
+// companies, emails, phones and custom terms (HPC_REDACT_TERMS, comma-
+// separated) are pseudonymized locally before anything leaves the machine,
+// and mapped back locally in the results. The raw engine must be chosen
+// explicitly and is meant for calibration/debugging only.
+const customTerms = (): string[] =>
+  (process.env.HPC_REDACT_TERMS ?? "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+registerProvider("anthropic", () =>
+  new RedactingProvider(new AnthropicProvider(), { customTerms: customTerms() }));
+registerProvider("anthropic-raw", () => new AnthropicProvider());
