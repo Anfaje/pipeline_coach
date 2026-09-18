@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Healthy Pipeline Coach</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F5F7F4; --card:#FFFFFF; --ink:#16211B; --muted:#5A6B61; --line:#DCE4DD;
+  --pine:#1E4D3B; --pine-deep:#143528; --pine-soft:#E3EDE6;
+  --violet:#5B4A8A; --violet-soft:#ECE7F6;
+  --amber:#A05E0B; --amber-soft:#F6ECDC;
+  --red:#9C3B2E; --red-soft:#F4E3DF;
+  --ok:#2E6B4F; --ok-soft:#E0EFE6;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121A15; --card:#1A2620; --ink:#E8EFE9; --muted:#96A89C; --line:#2C3B32;
+    --pine:#7FBFA0; --pine-deep:#A5D6BC; --pine-soft:#1F3329;
+    --violet:#B4A5DF; --violet-soft:#2A2440;
+    --amber:#D99A4E; --amber-soft:#33291A;
+    --red:#D97A6B; --red-soft:#3A2320;
+    --ok:#7FBFA0; --ok-soft:#1D3328;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121A15; --card:#1A2620; --ink:#E8EFE9; --muted:#96A89C; --line:#2C3B32;
+  --pine:#7FBFA0; --pine-deep:#A5D6BC; --pine-soft:#1F3329;
+  --violet:#B4A5DF; --violet-soft:#2A2440;
+  --amber:#D99A4E; --amber-soft:#33291A;
+  --red:#D97A6B; --red-soft:#3A2320;
+  --ok:#7FBFA0; --ok-soft:#1D3328;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Public Sans",system-ui,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:28px 20px 80px}
+header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:34px;flex-wrap:wrap}
+.brand{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.35rem;color:var(--pine-deep);cursor:pointer;background:none;border:none;padding:0}
+.brand small{display:block;font:500 .8rem/1.3 "Public Sans",system-ui,sans-serif;color:var(--muted)}
+nav.top a{color:var(--muted);text-decoration:none;font-size:.9rem;margin-left:18px;cursor:pointer}
+nav.top a:hover{color:var(--pine)}
+h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.9rem;line-height:1.2;margin:0 0 6px}
+h2{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.25rem;margin:34px 0 12px}
+h3{font-size:1rem;font-weight:600;margin:22px 0 8px}
+p{max-width:64ch}
+.sub{color:var(--muted);margin:0 0 26px;max-width:64ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px}
+button.primary{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:600}
+:root[data-theme="dark"] button.primary, body button.primary{color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#0E1712}}
+:root[data-theme="dark"] button.primary{color:#0E1712}
+button.primary:hover{filter:brightness(1.08)}
+button.quiet{border:none;background:none;color:var(--muted);padding:6px 8px}
+button.danger{color:var(--red);border-color:var(--red-soft)}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+input[type=text],input[type=date],textarea,select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 12px;width:100%}
+textarea{min-height:200px;resize:vertical}
+label{display:block;font-size:.85rem;font-weight:600;margin:14px 0 5px}
+label .hint{font-weight:400;color:var(--muted)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grow{flex:1 1 220px}
+.deal-item{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.deal-item:hover .deal-name{color:var(--pine)}
+.deal-name{font-weight:600}
+.deal-meta{color:var(--muted);font-size:.87rem}
+.minibars{display:flex;gap:4px}
+.minibars i{width:9px;height:22px;border-radius:2px;background:var(--line);display:inline-block}
+.status{font-size:.78rem;padding:2px 9px;border-radius:99px;background:var(--pine-soft);color:var(--pine-deep)}
+.status.won{background:var(--ok-soft);color:var(--ok)}
+.status.lost{background:var(--red-soft);color:var(--red)}
+.status.parked{background:var(--amber-soft);color:var(--amber)}
+.dim{margin:14px 0}
+.dim .head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.dim .name{font-weight:600}
+.dim .score{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.35rem}
+.bar{height:10px;border-radius:99px;background:var(--line);margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px}
+.band-low i{background:var(--red)} .band-mid i{background:var(--amber)} .band-high i{background:var(--ok)} .band-top i{background:var(--pine)}
+.band-low .score{color:var(--red)} .band-mid .score{color:var(--amber)} .band-high .score,.band-top .score{color:var(--pine-deep)}
+.tag{font-size:.75rem;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.tag.stale{border-color:var(--amber);color:var(--amber)}
+.tag.customer{border-color:var(--ok);color:var(--ok)}
+.tag.assumed{border-color:var(--amber);color:var(--amber)}
+mark.ph{background:var(--violet-soft);color:var(--violet);border-radius:4px;padding:0 4px;font-weight:600;font-size:.92em}
+.redline{white-space:pre-wrap;font-size:.93rem;line-height:1.7;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--bg)}
+.maplist{font-size:.88rem}
+.maplist li{margin:5px 0;list-style:none}
+.maplist ul{padding:0;margin:0}
+.kindchip{display:inline-block;min-width:74px;color:var(--violet);font-weight:600;font-size:.78rem}
+.assure{display:flex;gap:10px;align-items:flex-start;background:var(--pine-soft);border-radius:var(--radius);padding:14px 16px;margin:18px 0;color:var(--pine-deep)}
+.assure svg{flex:none;margin-top:2px}
+.quote{border-left:3px solid var(--line);margin:8px 0;padding:4px 0 4px 12px;color:var(--muted);font-size:.93rem}
+.quote b{color:var(--ink);font-weight:600}
+.verdict{font-family:Fraunces,Georgia,serif;font-size:1.25rem;line-height:1.45;margin:6px 0 18px}
+.he{background:var(--amber-soft);border-radius:8px;padding:12px 14px;margin:10px 0}
+.he b{color:var(--amber)}
+.steps{display:flex;gap:8px;margin:0 0 22px;flex-wrap:wrap}
+.steps span{font-size:.82rem;color:var(--muted);padding:4px 10px;border-radius:99px;border:1px solid var(--line)}
+.steps span.on{background:var(--pine);border-color:var(--pine);color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .steps span.on{color:#0E1712}}
+:root[data-theme="dark"] .steps span.on{color:#0E1712}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--pine-soft);border-top-color:var(--pine);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
+.notice{background:var(--amber-soft);color:var(--amber);border-radius:8px;padding:10px 14px;font-size:.9rem;margin:12px 0}
+.empty{color:var(--muted);padding:30px 0;text-align:left;max-width:56ch}
+details{border-top:1px solid var(--line);padding:10px 0}
+summary{cursor:pointer;font-weight:600}
+footer{margin-top:60px;color:var(--muted);font-size:.83rem;max-width:64ch}
+.prep h3{margin-top:18px}
+.prep li{margin:6px 0}
+ul.clean{padding-left:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <button class="brand" onclick="go('home')">Healthy Pipeline Coach<small>Pain · Power · Vision · Value · Control</small></button>
+    <nav class="top">
+      <a onclick="go('home')">Deals</a>
+      <a onclick="go('privacy')">How privacy works</a>
+    </nav>
+  </header>
+  <main id="app"><p class="sub">Loading…</p></main>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+"use strict";
+/* ============================== Rubric ================================= */
+const RUBRIC = {
+  id:"healthy-pipeline", version:"1.0.0", name:"The Healthy Pipeline",
+  staleness:{meetingsBeforeDecay:2, decayBands:1},
+  bands:[
+    {min:0,max:3,label:"not addressed",cls:"band-low"},
+    {min:4,max:6,label:"touched, unverified",cls:"band-mid"},
+    {min:7,max:8,label:"established",cls:"band-high"},
+    {min:9,max:10,label:"customer-articulated",cls:"band-top"}
+  ],
+  dimensions:[
+    {key:"pain",name:"Pain",definition:"The customer has articulated a concrete, admitted business problem in their own words, with consequences.",guidance:"Look for the customer describing a problem, its cost, or its consequences themselves. A seller stating the problem and the customer merely agreeing ('yes, exactly') is seller-assumed, not customer-stated. Hedged phrasing is weaker evidence than concrete statements with numbers."},
+    {key:"power",name:"Power",definition:"We know who owns the budget and the decision, and we are talking to them or have a credible, agreed path to them.",guidance:"Look for named roles, budget ownership, the decision process, and explicit requests for or grants of access to the economic buyer. A title alone is not power; confirmed decision authority is."},
+    {key:"vision",name:"Vision",definition:"The customer holds a concrete vision of solving the problem with our capabilities — ideally one they helped build.",guidance:"Look for the customer describing a future state ('if we could X, then we would Y') connected to the seller's offering. Co-creation scores higher than passive acceptance of the seller's pitch."},
+    {key:"value",name:"Value",definition:"The value is quantified and agreed by the customer — not merely claimed by the seller.",guidance:"Look for numbers: hours, money, risk — and for who states them. Customer-stated or customer-confirmed quantification scores high; seller-claimed ROI with no customer confirmation stays in the unverified band."},
+    {key:"control",name:"Control",definition:"The seller controls the process: a clear, mutually agreed next step with owners, dates, and a path to decision.",guidance:"Look at how the meeting ends. A scheduled next meeting with agreed purpose, participants and dates scores high. 'Send me some material' with no commitment scores low."}
+  ]
+};
+const band = s => RUBRIC.bands.find(b=>s>=b.min&&s<=b.max) || RUBRIC.bands[0];
+
+/* ========================= Transcript parsing ========================== */
+const VTT_TIMING=/^\d{2}:\d{2}(:\d{2})?[.,]\d{3}\s+-->\s+\d{2}:\d{2}/;
+const ZOOM_LINE=/^(\d{2}:\d{2}:\d{2})\s+(?:From\s+)?([^:]{1,60}?)\s*:\s*(.*)$/;
+const TEAMS_HEADER=/^(.{1,60}?)\s{1,}(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AP]M)?)$/i;
+const BRACKET_LINE=/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*([^:]{1,60}?)\s*:\s*(.*)$/;
+const LABELED_LINE=/^([^\d:]{1,40}?)\s*:\s*(.+)$/;
+function parseTranscript(raw){
+  const lines=raw.replace(/\r\n?/g,"\n").split("\n").map(l=>l.trim());
+  const warnings=[]; let format, utt=[];
+  const labeled=l=>{const b=l.match(BRACKET_LINE); if(b) return {timestamp:b[1],speaker:b[2].trim(),text:b[3].trim()}; const m=l.match(LABELED_LINE); return m?{speaker:m[1].trim(),text:m[2].trim()}:null;};
+  if(lines.some(l=>l==="WEBVTT"||VTT_TIMING.test(l))){
+    format="vtt"; let ts;
+    for(const line of lines){
+      if(line===""||line==="WEBVTT"||/^\d+$/.test(line))continue;
+      if(VTT_TIMING.test(line)){ts=line.split("-->")[0].trim();continue;}
+      const v=line.match(/^<v\s+([^>]+)>(.*?)(<\/v>)?$/);
+      if(v) utt.push({speaker:v[1].trim(),text:v[2].trim(),timestamp:ts});
+      else if(ts!==undefined){const l2=labeled(line); utt.push(l2?{...l2,timestamp:ts}:{speaker:"Unknown",text:line,timestamp:ts});}
+    }
+  } else if(lines.filter(l=>ZOOM_LINE.test(l)).length>=2){
+    format="zoom";
+    utt=lines.map(l=>l.match(ZOOM_LINE)).filter(Boolean).map(m=>({timestamp:m[1],speaker:m[2].trim(),text:m[3].trim()}));
+  } else if(lines.filter(l=>TEAMS_HEADER.test(l)&&!LABELED_LINE.test(l)).length>=2){
+    format="teams"; let cur=null;
+    for(const line of lines){
+      if(line==="")continue;
+      const h=line.match(TEAMS_HEADER);
+      if(h&&!LABELED_LINE.test(line)){if(cur)utt.push(cur);cur={speaker:h[1].trim(),text:"",timestamp:h[2]};continue;}
+      if(cur)cur.text=(cur.text+" "+line).trim();
+    }
+    if(cur)utt.push(cur);
+  } else if(lines.filter(l=>LABELED_LINE.test(l)||BRACKET_LINE.test(l)).length>=2){
+    format="labeled";
+    for(const line of lines){
+      if(line==="")continue;
+      const l2=labeled(line);
+      if(l2)utt.push(l2);
+      else if(utt.length)utt[utt.length-1].text+=" "+line;
+      else utt.push({speaker:"Unknown",text:line});
+    }
+  } else {
+    format="unlabeled";
+    utt=[{speaker:"Unknown",text:lines.filter(Boolean).join(" ")}];
+    warnings.push("No speaker labels detected. Scoring quality drops sharply without knowing who said what.");
+  }
+  const out=[]; for(const u of utt){const p=out[out.length-1]; if(p&&p.speaker===u.speaker)p.text=(p.text+" "+u.text).trim(); else out.push({...u});}
+  const speakers=[...new Set(out.map(u=>u.speaker))];
+  if(speakers.length===1&&speakers[0]!=="Unknown")warnings.push("Only one speaker detected — check that the whole conversation was pasted.");
+  return {format,utterances:out.filter(u=>u.text),speakers,warnings};
+}
+const canonical = p => p.utterances.map(u=>`${u.speaker}: ${u.text}`).join("\n");
+const DA=new Set("og,det,ikke,jeg,vi,er,at,en,til,på,med,som,der,de,har,kan,skal,os,jer,hvad,hvordan,hvorfor,når,også,meget,lidt,bare,noget,vores,jeres,ugen,kroner,tak".split(","));
+const EN=new Set("the,and,not,we,is,are,to,a,of,with,that,they,can,shall,us,you,what,how,why,when,also,very,little,just,something,our,your,week,thanks".split(","));
+function detectLanguages(text){
+  const words=(text.toLowerCase().match(/[a-zæøåéü']+/g))||[]; let da=0,en=0;
+  for(const w of words){if(DA.has(w))da++;if(EN.has(w))en++;}
+  if(/[æøå]/i.test(text))da+=Math.max(3,Math.round(words.length*0.02));
+  const total=da+en; if(!total)return [];
+  return [["da",da],["en",en]].sort((a,b)=>b[1]-a[1]).filter(([,n])=>n>=Math.max(3,total*0.2)).map(([l])=>l);
+}
+
+/* ============================ Redaction =============================== */
+const PREFIX={person:"PERSON",company:"COMPANY",email:"EMAIL",phone:"PHONE",term:"TERM",name:"NAME"};
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+const EMAIL_RE=/[\p{L}0-9._%+-]+@[\p{L}0-9.-]+\.[\p{L}]{2,}/gu;
+const PHONE_RE=/(?:\+\d{1,3}[ .-]?)\d{2}[ .-]\d{2}[ .-]\d{2}[ .-]\d{2}\b|\b\d{2} \d{2} \d{2} \d{2}\b|\b\d{4} \d{4}\b/g;
+const COMPANY_RE=/(?:[A-ZÆØÅ][\p{L}0-9&.-]*\s){0,3}[A-ZÆØÅ][\p{L}0-9&.-]*\s(?:A\/S|ApS|AS|AB|Oy|GmbH|AG|Ltd\.?|Inc\.?|LLC|P\/S|I\/S|K\/S)(?![\p{L}])/gu;
+const STOP=new Set("I,I'm,I'll,I've,I'd,OK,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday,January,February,March,April,May,June,July,August,September,October,November,December,God,Christmas,Easter,Teams,Zoom,Excel,PowerPoint".split(","));
+function properNouns(text){
+  const found=new Set();
+  for(const line of text.split("\n")){
+    const body=line.replace(/^[^:]{1,40}:\s*/u,"");
+    let sentenceStart=true,span=[];
+    const flush=()=>{if(span.length){const j=span.join(" ");if(!STOP.has(j))found.add(j);span=[];}};
+    for(const rawTok of body.split(/\s+/)){
+      const tok=rawTok.replace(/^[("'«]+|[)"'»,.;:!?]+$/gu,"");
+      if(!tok){flush();continue;}
+      const cap=/^[A-ZÆØÅ][\p{Ll}\p{Lu}0-9&.-]*$/u.test(tok);
+      const acro=/^[A-ZÆØÅ0-9]{1,4}$/.test(tok);
+      if(cap&&!acro&&!sentenceStart&&!STOP.has(tok))span.push(tok);else flush();
+      sentenceStart=/[.!?]$/.test(rawTok);
+    }
+    flush();
+  }
+  return [...found];
+}
+/* seed: existing entries (deal-level) so placeholders stay stable across meetings */
+function buildMap(text,{speakers=[],customTerms=[],seed=[]}={}){
+  const bySeed=new Map(seed.map(e=>[e.original.toLowerCase(),e]));
+  const counters={}; for(const e of seed){const m=e.placeholder.match(/_(\d+)$/); const k=e.kind; if(m)counters[k]=Math.max(counters[k]||0,+m[1]);}
+  const entries=[],seen=new Set();
+  const push=(original,kind)=>{
+    original=original.trim(); const key=original.toLowerCase();
+    if(original.length<2||seen.has(key))return; seen.add(key);
+    const ex=bySeed.get(key);
+    if(ex){entries.push(ex);return;}
+    counters[kind]=(counters[kind]||0)+1;
+    entries.push({original,kind,placeholder:`${PREFIX[kind]}_${counters[kind]}`});
+  };
+  for(const t of customTerms)push(t,"term");
+  for(const s of speakers){push(s,"person");for(const p of s.split(/\s+/))if(p.length>=3)push(p,"person");}
+  for(const m of text.match(EMAIL_RE)||[])push(m,"email");
+  for(const m of text.match(PHONE_RE)||[])push(m,"phone");
+  for(const m of text.match(COMPANY_RE)||[])push(m,"company");
+  for(const n of properNouns(text))push(n,"name");
+  entries.sort((a,b)=>b.original.length-a.original.length);
+  return entries;
+}
+const redact=(text,map)=>{let out=text;for(const e of map)out=out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${esc(e.original)}(s)?(?![\\p{L}\\p{N}_])`,"gu"),(m,s)=>e.placeholder+(s||""));return out;};
+const unredact=(text,map)=>{let out=text;for(const e of map)out=out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${esc(e.placeholder)}(s)?(?![\\p{L}\\p{N}_])`,"gu"),(m,s)=>e.original+(s||""));return out;};
+
+/* ======================= Quote validation ============================= */
+const norm=s=>s.toLowerCase().replace(/[\u2018\u2019\u201A\u201B]/g,"'").replace(/[\u201C\u201D\u201E\u201F]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/\s+/g," ").trim();
+function invalidQuotes(transcript,quotes){const h=norm(transcript);return quotes.filter(q=>{const n=norm(q.text);return !n||!h.includes(n);});}
+
+/* ============================ Analysis ================================ */
+function analysisPrompt(redactedTranscript,sellerPh,goalPh,langs,feedback){
+  const dims=RUBRIC.dimensions.map(d=>`### ${d.name} (key: ${d.key})\nDefinition: ${d.definition}\nGuidance: ${d.guidance}`).join("\n\n");
+  const bands=RUBRIC.bands.map(b=>`${b.min}-${b.max} ${b.label}`).join("\n");
+  return [
+`You are a sales coach scoring one meeting transcript against "The Healthy Pipeline" framework (Pain, Power, Vision, Value, Control).`,
+`Privacy note: names and companies in the transcript were replaced with placeholders like PERSON_1 or COMPANY_1. Treat placeholders as the people/organizations they stand for and copy them verbatim where needed.`,
+`The seller is the speaker labeled "${sellerPh}".`,
+goalPh?`The seller's stated goal for this meeting: ${goalPh}`:"",
+`Write "reasoning" and "verdict" in ${langs[0]==="da"?"Danish":"English"}.`,
+`\n## Dimensions\n${dims}`,
+`\n## Score bands (0-10)\n${bands}`,
+`\n## Hard rules
+- Every dimension score above 3 MUST cite 1-3 VERBATIM quotes from the transcript, each with its speaker label. Copy character-for-character; never paraphrase.
+- Content stated by the seller and merely acknowledged by the customer is confidence "seller_assumed"; the same content stated by the customer is "customer_stated". Seller-assumed evidence cannot score above 6.
+- List happy-ears findings: assumptions the seller treated as confirmed that the customer never stated. Also list missed buying signals.`,
+feedback?`\n## Correction required\n${feedback}`:"",
+`\n## Output
+Respond with ONLY a JSON object, no markdown fences:
+{"dimensions":[{"dimensionKey":string,"score":number,"confidence":"customer_stated"|"seller_assumed","evidence":[{"speaker":string,"text":string}],"reasoning":string}],"happyEars":[{"assumption":string,"reality":string}],"missedSignals":[string],"verdict":string}`,
+`\n## Transcript\n${redactedTranscript}`
+  ].filter(Boolean).join("\n");
+}
+async function runAnalysis(sampleFn,redactedTranscript,sellerPh,goalPh,langs,onStatus){
+  const attempt=async fb=>sampleFn.json(analysisPrompt(redactedTranscript,sellerPh,goalPh,langs,fb));
+  onStatus("Scoring the five dimensions…");
+  let a=await attempt();
+  const check=x=>{const fails=[];for(const d of x.dimensions||[]){if(d.score>3){if(!d.evidence||!d.evidence.length){fails.push(`${d.dimensionKey}: score ${d.score} with no evidence`);continue;}for(const q of invalidQuotes(redactedTranscript,d.evidence))fails.push(`${d.dimensionKey}: quote not found verbatim: "${q.text}"`);}}return fails;};
+  let fails=check(a);
+  if(fails.length){
+    onStatus("Verifying evidence — asking for exact quotes…");
+    a=await attempt("Some cited quotes were not found verbatim in the transcript. Re-analyze and cite only exact verbatim passages. Failures:\n"+fails.join("\n"));
+    fails=check(a);
+    if(fails.length){
+      a.degraded=true;
+      a.dimensions=a.dimensions.map(d=>{
+        if(d.score<=3)return d;
+        const bad=invalidQuotes(redactedTranscript,d.evidence||[]);
+        const ok=(d.evidence||[]).filter(q=>!bad.includes(q));
+        return ok.length?{...d,evidence:ok}:{...d,score:3,evidence:[],reasoning:(d.reasoning||"")+" [Score capped: cited evidence could not be verified.]"};
+      });
+    }
+  }
+  return a;
+}
+function deredactAnalysis(a,map){
+  const un=s=>unredact(s||"",map);
+  return {...a,
+    dimensions:(a.dimensions||[]).map(d=>({...d,reasoning:un(d.reasoning),evidence:(d.evidence||[]).map(q=>({speaker:un(q.speaker),text:un(q.text)}))})),
+    happyEars:(a.happyEars||[]).map(h=>({assumption:un(h.assumption),reality:un(h.reality)})),
+    missedSignals:(a.missedSignals||[]).map(un),
+    verdict:un(a.verdict)};
+}
+
+/* ====================== Deal-level score merge ======================== */
+function mergeDealScores(meetings){
+  if(!meetings.length)return [];
+  const latest=Math.max(...meetings.map(m=>m.sequence));
+  return RUBRIC.dimensions.map(dim=>{
+    let best=null;
+    for(const m of meetings){
+      const d=(m.analysis?.dimensions||[]).find(x=>x.dimensionKey===dim.key);
+      if(!d)continue;
+      if(!best||d.score>best.score||(d.score===best.score&&m.sequence>best.sequence))best={score:d.score,sequence:m.sequence,meetingId:m.id,confidence:d.confidence};
+    }
+    if(!best)return {dimensionKey:dim.key,score:0,rawScore:0,stale:false,meetingsSince:latest,sourceSequence:0};
+    const since=latest-best.sequence;
+    const stale=since>RUBRIC.staleness.meetingsBeforeDecay&&best.score>RUBRIC.bands[0].max;
+    let score=best.score;
+    if(stale){const b=band(score);const i=RUBRIC.bands.indexOf(b);score=i>0?RUBRIC.bands[i-1].max:RUBRIC.bands[0].min;}
+    return {dimensionKey:dim.key,score,rawScore:best.score,stale,meetingsSince:since,sourceSequence:best.sequence,confidence:best.confidence};
+  });
+}
+
+/* ============================ Storage ================================= */
+const store={
+  mode:"local", db:null, uid:null,
+  async init(){
+    try{
+      const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+      if(db&&user){this.db=db;this.uid=await user.id();this.mode="db";}
+    }catch(e){/* fall back */}
+  },
+  _lsKey:"hpc-data",
+  _ls(){try{return JSON.parse(localStorage.getItem(this._lsKey)||'{"docs":{}}');}catch(e){return {docs:{}};}},
+  _lsSave(d){try{localStorage.setItem(this._lsKey,JSON.stringify(d));}catch(e){}},
+  _path(id){return `data/users/${this.uid}/${id}`;},
+  async list(){
+    if(this.mode==="db"){
+      const snap=await this.db.collection(`data/users/${this.uid}`).get();
+      return snap.docs.map(d=>({id:d.id,...d.data()}));
+    }
+    const d=this._ls();return Object.entries(d.docs).map(([id,v])=>({id,...v}));
+  },
+  async save(id,doc){
+    if(this.mode==="db"){await this.db.doc(this._path(id)).set(doc);return;}
+    const d=this._ls();d.docs[id]=doc;this._lsSave(d);
+  },
+  async remove(id){
+    if(this.mode==="db"){await this.db.doc(this._path(id)).delete();return;}
+    const d=this._ls();delete d.docs[id];this._lsSave(d);
+  }
+};
+
+/* ============================== App =================================== */
+const S={view:"home",deals:[],meetings:[],deal:null,meeting:null,draft:null,sample:null,busy:"",prepBusy:false};
+const $=id=>document.getElementById(id);
+const escH=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=> Math.random().toString(36).slice(2,10);
+const today=()=>new Date().toISOString().slice(0,10);
+
+async function boot(){
+  render(); // first paint immediately
+  store.init().then(refresh);
+  claude.use("sample").then(s=>{S.sample=s;render();});
+}
+async function refresh(){
+  const all=await store.list();
+  S.deals=all.filter(d=>d.type==="deal").sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  S.meetings=all.filter(d=>d.type==="meeting");
+  render();
+}
+const dealMeetings=dealId=>S.meetings.filter(m=>m.dealId===dealId).sort((a,b)=>a.sequence-b.sequence);
+function go(view,arg){
+  S.view=view;
+  if(view==="deal"){S.deal=S.deals.find(d=>d.id===arg)||S.deal;S.draft=null;}
+  if(view==="meeting"){S.meeting=S.meetings.find(m=>m.id===arg);}
+  if(view==="home"){S.deal=null;S.draft=null;}
+  render();
+}
+
+/* ------------------------------ views -------------------------------- */
+function render(){
+  const el=$("app");
+  const v=S.view;
+  el.innerHTML = v==="home"?viewHome():v==="deal"?viewDeal():v==="meeting"?viewMeeting():v==="analyze"?viewAnalyze():v==="privacy"?viewPrivacy():viewHome();
+  $("foot").innerHTML=`Scores are coaching input, not truth — the rubric follows the Healthy Pipeline framework (v${RUBRIC.version}). ${store.mode==="db"?"Your deals are stored privately to your account.":"Your deals are stored in this browser only."}`;
+}
+
+function minibars(deal){
+  const scores=mergeDealScores(dealMeetings(deal.id));
+  return `<span class="minibars">${RUBRIC.dimensions.map(d=>{
+    const s=scores.find(x=>x.dimensionKey===d.key);
+    const h=s?Math.max(3,s.score/10*22):3;
+    const c=s&&s.score>0?`background:var(--${band(s.score).cls==="band-low"?"red":band(s.score).cls==="band-mid"?"amber":"pine"})`:"";
+    return `<i title="${d.name}" style="height:${h}px;${c};align-self:flex-end"></i>`;}).join("")}</span>`;
+}
+
+function viewHome(){
+  const deals=S.deals.map(d=>`
+    <div class="deal-item" onclick="go('deal','${d.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')go('deal','${d.id}')">
+      <div><div class="deal-name">${escH(d.customer)}</div>
+      <div class="deal-meta">${escH(d.offering)} · ${dealMeetings(d.id).length} meeting${dealMeetings(d.id).length===1?"":"s"}</div></div>
+      <div class="row">${minibars(d)}<span class="status ${d.status}">${d.status}</span></div>
+    </div>`).join("");
+  return `
+    <h1>Your deals</h1>
+    <p class="sub">After each customer meeting, paste the transcript here. You get an honest score on the five dimensions and a plan for the next conversation — and no name or company ever reaches the AI model. <a onclick="go('privacy')" style="cursor:pointer;color:var(--pine)">See how privacy works.</a></p>
+    ${deals||`<div class="empty">No deals yet. Create your first one below — a deal is one customer opportunity that you'll attach meetings to over time.</div>`}
+    <h2>New deal</h2>
+    <div class="card">
+      <div class="row">
+        <div class="grow"><label for="nd-c">Customer</label><input id="nd-c" type="text" placeholder="Nordkap A/S"></div>
+        <div class="grow"><label for="nd-o">What you're selling</label><input id="nd-o" type="text" placeholder="Project analytics platform"></div>
+      </div>
+      <label for="nd-t">Always-hide terms <span class="hint">— your own company, product names, anything that must never reach the model. Comma-separated.</span></label>
+      <input id="nd-t" type="text" placeholder="Fakturafix, Mit Firma ApS">
+      <div style="margin-top:16px"><button class="primary" onclick="createDeal()">Create deal</button></div>
+    </div>`;
+}
+async function createDeal(){
+  const customer=$("nd-c").value.trim(),offering=$("nd-o").value.trim();
+  if(!customer)return $("nd-c").focus();
+  const deal={type:"deal",customer,offering,status:"active",createdAt:new Date().toISOString(),
+    customTerms:$("nd-t").value.split(",").map(t=>t.trim()).filter(Boolean),redactionMap:[]};
+  const id="deal_"+uid(); await store.save(id,deal); await refresh(); go("deal",id);
+}
+
+function dimBar(dim,s){
+  const b=band(s.score),cls=s.score>0?b.cls:"band-low";
+  return `<div class="dim ${cls}">
+    <div class="head"><span class="name">${dim.name}</span>
+      <span class="row" style="gap:8px">
+        ${s.stale?`<span class="tag stale">stale — reconfirm (was ${s.rawScore})</span>`:""}
+        ${s.confidence==="seller_assumed"&&s.score>0?`<span class="tag assumed">seller-assumed</span>`:""}
+        <span class="score">${s.score}<small style="font-size:.7em;color:var(--muted)">/10</small></span>
+      </span></div>
+    <div class="bar"><i style="width:${s.score*10}%"></i></div>
+    <div class="deal-meta">${s.score>0?band(s.score).label+(s.sourceSequence?` · from meeting ${s.sourceSequence}`:""):"not addressed yet"}</div>
+  </div>`;
+}
+
+function viewDeal(){
+  const d=S.deal; if(!d)return viewHome();
+  const ms=dealMeetings(d.id);
+  const scores=mergeDealScores(ms);
+  const meetings=ms.map(m=>`
+    <div class="deal-item" onclick="go('meeting','${m.id}')" role="button" tabindex="0">
+      <div><div class="deal-name">Meeting ${m.sequence} · ${escH(m.date)}</div>
+      <div class="deal-meta">${escH((m.analysis?.verdict||"").slice(0,110))}</div></div>
+    </div>`).join("");
+  return `
+    <button class="quiet" onclick="go('home')">← All deals</button>
+    <h1>${escH(d.customer)}</h1>
+    <p class="sub">${escH(d.offering)}</p>
+    <div class="row" style="margin-bottom:20px">
+      <button class="primary" onclick="startAnalyze()">Analyze a meeting</button>
+      <button onclick="prepPack()" ${ms.length?"":"disabled"} id="prep-btn">${S.prepBusy?'<span class="spin"></span>Preparing…':"Prepare next meeting"}</button>
+      <select onchange="setStatus(this.value)" style="width:auto">
+        ${["active","won","lost","parked"].map(s=>`<option ${d.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+      <button class="danger" onclick="deleteDeal()">Delete deal &amp; all its data</button>
+    </div>
+    ${ms.length?`<h2>Where this deal stands</h2><div class="card">${RUBRIC.dimensions.map(dim=>dimBar(dim,scores.find(s=>s.dimensionKey===dim.key))).join("")}</div>`:`<div class="empty">No meetings analyzed yet. Paste your first transcript to see where this deal stands on the five dimensions.</div>`}
+    ${d.prepPack?renderPrep(d.prepPack):""}
+    ${ms.length?`<h2>Meetings</h2>${meetings}`:""}`;
+}
+async function setStatus(s){S.deal.status=s;await store.save(S.deal.id,stripId(S.deal));await refresh();S.deal=S.deals.find(x=>x.id===S.deal.id);render();}
+async function deleteDeal(){
+  if(!confirm("Delete this deal, all its meetings, transcripts and analyses? This cannot be undone."))return;
+  for(const m of dealMeetings(S.deal.id))await store.remove(m.id);
+  await store.remove(S.deal.id); await refresh(); go("home");
+}
+const stripId=o=>{const {id,...rest}=o;return rest;};
+
+/* --------------------------- analyze flow ----------------------------- */
+function startAnalyze(){S.draft={step:1,raw:"",date:today(),goal:"",terms:(S.deal.customTerms||[]).join(", ")};S.view="analyze";render();}
+function stepsBar(n){return `<div class="steps">${["Paste","Who's who","Review what leaves your device","Results"].map((t,i)=>`<span class="${i+1===n?"on":""}">${i+1}. ${t}</span>`).join("")}</div>`;}
+function viewAnalyze(){
+  const d=S.draft,deal=S.deal; if(!d||!deal)return viewHome();
+  if(!S.sample&&d.step<4){/* still allow flow, block at run */}
+  if(d.step===1)return `
+    <button class="quiet" onclick="go('deal','${deal.id}')">← ${escH(deal.customer)}</button>
+    <h1>Analyze a meeting</h1>${stepsBar(1)}
+    <div class="card">
+      <label for="tr">Transcript <span class="hint">— paste from Teams, Zoom or notes. It stays on this page until you approve what leaves.</span></label>
+      <textarea id="tr" placeholder="Anna: Hvad er den største udfordring lige nu?&#10;Mads: Vi taber to uger per projekt på omarbejde…">${escH(d.raw)}</textarea>
+      <div class="row">
+        <div class="grow"><label for="md">Meeting date</label><input id="md" type="date" value="${d.date}"></div>
+        <div class="grow"><label for="mg">Your goal for this meeting <span class="hint">(optional)</span></label><input id="mg" type="text" value="${escH(d.goal)}" placeholder="Confirm budget ownership"></div>
+      </div>
+      <div style="margin-top:16px"><button class="primary" onclick="doParse()">Continue</button></div>
+    </div>`;
+  if(d.step===2){
+    return `
+    <button class="quiet" onclick="S.draft.step=1;render()">← Back</button>
+    <h1>Who's who</h1>${stepsBar(2)}
+    ${d.parsed.warnings.map(w=>`<div class="notice">${escH(w)}</div>`).join("")}
+    <div class="card">
+      <p class="deal-meta" style="margin-top:0">Detected: ${d.parsed.format} format · ${d.parsed.speakers.length} speaker${d.parsed.speakers.length===1?"":"s"} · ${d.langs.map(l=>l==="da"?"Danish":"English").join(" + ")||"language unclear"}</p>
+      <label>You are <span class="hint">— the seller. Never guessed, always asked.</span></label>
+      ${d.parsed.speakers.map(s=>`<label style="font-weight:400;margin:6px 0"><input type="radio" name="seller" value="${escH(s)}" ${d.seller===s?"checked":""} onchange="S.draft.seller=this.value"> ${escH(s)}</label>`).join("")}
+      <label for="terms">Always-hide terms <span class="hint">— added to what gets pseudonymized. Comma-separated.</span></label>
+      <input id="terms" type="text" value="${escH(d.terms)}">
+      <div style="margin-top:16px"><button class="primary" onclick="doRedact()">Review what leaves your device</button></div>
+    </div>`;
+  }
+  if(d.step===3){
+    const counts={};for(const e of d.map)counts[e.kind]=(counts[e.kind]||0)+1;
+    const stat=Object.entries(counts).map(([k,n])=>`${n} ${k==="name"?"other name":k}${n>1?"s":""}`).join(", ");
+    const html=escH(d.redacted).replace(/(PERSON|COMPANY|EMAIL|PHONE|TERM|NAME)_\d+/g,m=>`<mark class="ph">${m}</mark>`);
+    return `
+    <button class="quiet" onclick="S.draft.step=2;render()">← Back</button>
+    <h1>Review what leaves your device</h1>${stepsBar(3)}
+    <div class="assure">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      <div><b>This is everything the AI will see.</b> ${d.map.length?`Pseudonymized on this page, before sending: ${stat}. Real names are mapped back locally when the results return.`:"Nothing was detected to pseudonymize — add terms below if anything sensitive remains."}</div>
+    </div>
+    <div class="card">
+      <div class="redline">${html}</div>
+      ${d.map.length?`<h3>What was replaced</h3><div class="maplist"><ul>${d.map.map(e=>`<li><span class="kindchip">${e.placeholder}</span> ${escH(e.original)}</li>`).join("")}</ul></div>`:""}
+      <label for="addterm">Something still visible that shouldn't be?</label>
+      <div class="row"><div class="grow"><input id="addterm" type="text" placeholder="Add a term and press Hide it"></div><button onclick="addTerm()">Hide it</button></div>
+      <div style="margin-top:18px" class="row">
+        <button class="primary" onclick="doRun()" ${S.sample?"":"disabled"}>Looks right — run the analysis</button>
+        ${S.sample?"":`<span class="deal-meta">AI analysis isn't available in this view.</span>`}
+      </div>
+    </div>`;
+  }
+  return `
+    <h1>Analyzing…</h1>${stepsBar(4)}
+    <div class="card"><p><span class="spin"></span>${escH(S.busy||"Working…")}</p>
+    <p class="deal-meta">The model sees only the pseudonymized transcript you approved. Results are mapped back to real names on this page.</p></div>`;
+}
+function doParse(){
+  const d=S.draft;
+  d.raw=$("tr").value; d.date=$("md").value||today(); d.goal=$("mg").value.trim();
+  if(!d.raw.trim())return $("tr").focus();
+  d.parsed=parseTranscript(d.raw);
+  d.canonical=canonical(d.parsed);
+  d.langs=detectLanguages(d.canonical);
+  d.seller=d.parsed.speakers.length===1?d.parsed.speakers[0]:(d.parsed.speakers.includes(d.seller)?d.seller:null);
+  d.step=2; render();
+}
+function doRedact(){
+  const d=S.draft;
+  d.terms=$("terms").value;
+  if(!d.seller&&d.parsed.speakers.length>1){alert("Choose which speaker is you first.");return;}
+  d.seller=d.seller||d.parsed.speakers[0];
+  const customTerms=d.terms.split(",").map(t=>t.trim()).filter(Boolean);
+  d.map=buildMap(d.canonical+"\n"+d.goal,{speakers:d.parsed.speakers,customTerms,seed:S.deal.redactionMap||[]});
+  d.redacted=redact(d.canonical,d.map);
+  d.step=3; render();
+}
+function addTerm(){
+  const v=$("addterm").value.trim(); if(!v)return;
+  S.draft.terms=(S.draft.terms?S.draft.terms+", ":"")+v;
+  const customTerms=S.draft.terms.split(",").map(t=>t.trim()).filter(Boolean);
+  S.draft.map=buildMap(S.draft.canonical+"\n"+S.draft.goal,{speakers:S.draft.parsed.speakers,customTerms,seed:S.deal.redactionMap||[]});
+  S.draft.redacted=redact(S.draft.canonical,S.draft.map);
+  render();
+}
+async function doRun(){
+  const d=S.draft,deal=S.deal;
+  d.step=4; S.busy="Scoring the five dimensions…"; render();
+  try{
+    const sellerPh=redact(d.seller,d.map);
+    const goalPh=d.goal?redact(d.goal,d.map):"";
+    const raw=await runAnalysis(S.sample,d.redacted,sellerPh,goalPh,d.langs.length?d.langs:["en"],t=>{S.busy=t;render();});
+    const analysis=deredactAnalysis(raw,d.map);
+    const seq=dealMeetings(deal.id).length+1;
+    const mid="meeting_"+uid();
+    const meeting={type:"meeting",dealId:deal.id,date:d.date,sequence:seq,languages:d.langs,
+      transcript:d.canonical,sellerSpeaker:d.seller,sellerGoal:d.goal,
+      redactionMap:d.map,analysis,createdAt:new Date().toISOString()};
+    await store.save(mid,meeting);
+    // persist union of maps on the deal so placeholders stay stable next meeting
+    const known=new Set((deal.redactionMap||[]).map(e=>e.original.toLowerCase()));
+    deal.redactionMap=[...(deal.redactionMap||[]),...d.map.filter(e=>!known.has(e.original.toLowerCase()))];
+    deal.customTerms=d.terms.split(",").map(t=>t.trim()).filter(Boolean);
+    await store.save(deal.id,stripId(deal));
+    await refresh();
+    S.deal=S.deals.find(x=>x.id===deal.id);
+    go("meeting",mid);
+  }catch(e){
+    S.busy="";S.draft.step=3;render();
+    const msg=e&&e.code==="not_granted"?"You declined AI access for this page — the analysis can't run without it.":"The analysis failed: "+escH(e.message||String(e));
+    const el=$("app");el.insertAdjacentHTML("afterbegin",`<div class="notice">${msg}</div>`);
+  }
+}
+
+function viewMeeting(){
+  const m=S.meeting; if(!m)return viewHome();
+  const deal=S.deals.find(d=>d.id===m.dealId);
+  const a=m.analysis;
+  return `
+    <button class="quiet" onclick="go('deal','${m.dealId}')">← ${escH(deal?deal.customer:"Deal")}</button>
+    <h1>Meeting ${m.sequence} · ${escH(m.date)}</h1>
+    ${a.degraded?`<div class="notice">Some cited evidence couldn't be verified word-for-word, so the affected scores were capped. Treat this analysis with extra skepticism.</div>`:""}
+    <p class="verdict">${escH(a.verdict)}</p>
+    <div class="card">
+    ${RUBRIC.dimensions.map(dim=>{
+      const d=(a.dimensions||[]).find(x=>x.dimensionKey===dim.key);
+      if(!d)return "";
+      const b=band(d.score);
+      return `<div class="dim ${b.cls}">
+        <div class="head"><span class="name">${dim.name}</span>
+          <span class="row" style="gap:8px">
+            <span class="tag ${d.confidence==="customer_stated"?"customer":"assumed"}">${d.confidence==="customer_stated"?"customer said it":"you assumed it"}</span>
+            <span class="score">${d.score}<small style="font-size:.7em;color:var(--muted)">/10</small></span>
+          </span></div>
+        <div class="bar"><i style="width:${d.score*10}%"></i></div>
+        <p style="margin:8px 0 4px">${escH(d.reasoning)}</p>
+        ${(d.evidence||[]).map(q=>`<div class="quote"><b>${escH(q.speaker)}:</b> “${escH(q.text)}”</div>`).join("")}
+      </div>`;}).join("")}
+    </div>
+    ${(a.happyEars||[]).length?`<h2>Happy ears</h2><p class="sub">Things treated as settled that the customer never actually said.</p>${a.happyEars.map(h=>`<div class="he"><b>You assumed:</b> ${escH(h.assumption)}<br><b>What was said:</b> ${escH(h.reality)}</div>`).join("")}`:""}
+    ${(a.missedSignals||[]).length?`<h2>Signals you may have missed</h2><ul class="clean">${a.missedSignals.map(s=>`<li>${escH(s)}</li>`).join("")}</ul>`:""}
+    <details><summary>Transcript (stored with this meeting)</summary><div class="redline" style="margin-top:10px">${escH(m.transcript)}</div></details>`;
+}
+
+/* ---------------------------- prep pack ------------------------------- */
+async function prepPack(){
+  const deal=S.deal; const ms=dealMeetings(deal.id); if(!ms.length||S.prepBusy)return;
+  if(!S.sample){alert("AI isn't available in this view.");return;}
+  S.prepBusy=true; render();
+  try{
+    const scores=mergeDealScores(ms);
+    const weak=[...scores].sort((a,b)=>(a.score+(a.stale?-2:0))-(b.score+(b.stale?-2:0))).slice(0,3);
+    const map=deal.redactionMap||[];
+    const langs=ms[ms.length-1].languages||["en"];
+    const evidence=ms.slice(-3).map(m=>`Meeting ${m.sequence} (${m.date}):\n`+(m.analysis.dimensions||[]).map(d=>`- ${d.dimensionKey} ${d.score}/10 (${d.confidence}): ${redact(d.reasoning||"",map)}`).join("\n")).join("\n\n");
+    const prompt=`You are a sales coach using "The Healthy Pipeline" framework. A consultant is preparing the next meeting in an ongoing deal. Names were replaced by placeholders like PERSON_1/COMPANY_1 — treat them as the real people and copy them verbatim.
+
+Current deal state (0-10 per dimension, staleness noted):
+${scores.map(s=>`- ${s.dimensionKey}: ${s.score}/10${s.stale?" (stale — not reconfirmed for "+s.meetingsSince+" meetings)":""}`).join("\n")}
+
+Focus dimensions (weakest/stalest): ${weak.map(w=>w.dimensionKey).join(", ")}
+
+Recent meeting summaries:
+${evidence}
+
+Write the preparation pack in ${langs[0]==="da"?"Danish":"English"}. Questions must sound natural and consultative, not like an interrogation.
+
+Respond with ONLY JSON, no markdown fences:
+{"focus":[{"dimensionKey":string,"why":string,"questions":[string,string,string]}],"agenda":[string],"actions":[string]}`;
+    const raw=await S.sample.json(prompt);
+    const un=s=>unredact(s||"",map);
+    deal.prepPack={generated:today(),
+      focus:(raw.focus||[]).map(f=>({dimensionKey:f.dimensionKey,why:un(f.why),questions:(f.questions||[]).map(un)})),
+      agenda:(raw.agenda||[]).map(un),actions:(raw.actions||[]).map(un)};
+    await store.save(deal.id,stripId(deal));
+    await refresh(); S.deal=S.deals.find(x=>x.id===deal.id);
+  }catch(e){alert(e&&e.code==="not_granted"?"You declined AI access for this page.":"Couldn't generate the prep pack: "+(e.message||e));}
+  S.prepBusy=false; render();
+}
+function renderPrep(p){
+  const dn=k=>{const d=RUBRIC.dimensions.find(x=>x.key===k);return d?d.name:k;};
+  return `<h2>Next meeting — your preparation</h2><div class="card prep">
+    <p class="deal-meta" style="margin-top:0">Generated ${escH(p.generated)} from this deal's gaps.</p>
+    ${(p.focus||[]).map(f=>`<h3>${escH(dn(f.dimensionKey))}</h3><p style="margin:4px 0 8px">${escH(f.why)}</p><ul class="clean">${(f.questions||[]).map(q=>`<li>${escH(q)}</li>`).join("")}</ul>`).join("")}
+    ${(p.agenda||[]).length?`<h3>Suggested agenda</h3><ul class="clean">${p.agenda.map(a=>`<li>${escH(a)}</li>`).join("")}</ul>`:""}
+    ${(p.actions||[]).length?`<h3>Before the meeting</h3><ul class="clean">${p.actions.map(a=>`<li>${escH(a)}</li>`).join("")}</ul>`:""}
+  </div>`;
+}
+
+/* ---------------------------- privacy --------------------------------- */
+function viewPrivacy(){
+  return `
+  <button class="quiet" onclick="go('home')">← Back</button>
+  <h1>How privacy works here</h1>
+  <p class="sub">Meeting transcripts are your customers' confidential words. This tool is built so you can get coaching on them without handing those words to anyone.</p>
+  <h2>What happens to a transcript</h2>
+  <div class="card">
+    <p><b>1. It stays on this page.</b> When you paste a transcript, it is parsed right here in your browser — speakers, languages, structure. Nothing has been sent anywhere yet.</p>
+    <p><b>2. Names are replaced before anything leaves.</b> On this page, deterministically and without any AI: every speaker's name, other people's names, company names (recognized by legal suffixes like A/S, ApS, GmbH, Ltd), email addresses, phone numbers, and every term on your always-hide list are swapped for neutral placeholders — <mark class="ph">PERSON_1</mark>, <mark class="ph">COMPANY_1</mark>, <mark class="ph">EMAIL_1</mark>. Money amounts and plain numbers are kept, because quantified value is exactly what gets scored.</p>
+    <p><b>3. You review before anything runs.</b> The review screen shows the exact pseudonymized text — everything the AI will see — and the full replacement list. If something sensitive is still visible, add it as a term and it is hidden on the spot. The analysis only runs after you approve.</p>
+    <p><b>4. The AI coaches the pseudonymized version.</b> It scores <mark class="ph">PERSON_2</mark>'s pain statement without ever knowing who <mark class="ph">PERSON_2</mark> is.</p>
+    <p><b>5. Real names come back only on your screen.</b> The placeholder map never leaves this page; when results return, placeholders are mapped back locally, so what you read uses real names while the model never saw them.</p>
+  </div>
+  <h2>Honest limits</h2>
+  <div class="card">
+    <p>Detection of names is deterministic but heuristic. It reliably catches speakers, emails, phone numbers, terms you list, and capitalized names inside sentences. It can miss a name that only ever appears at the start of a sentence, or an all-caps brand that looks like an acronym. That is exactly why the review step exists — you always see and approve what leaves, and one click hides anything the heuristics missed. Terms you add are remembered per deal.</p>
+    <p>Your deals, transcripts and analyses are stored ${store.mode==="db"?"privately to your account — other people cannot read them, and this page cannot be shared publicly while it stores data this way":"in this browser only (private storage isn't available in this view)"}. Deleting a deal removes all of its meetings, transcripts and analyses in one action.</p>
+  </div>`;
+}
+
+/* ------------------------------ start --------------------------------- */
+window.go=go;window.createDeal=createDeal;window.startAnalyze=startAnalyze;window.doParse=doParse;window.doRedact=doRedact;window.addTerm=addTerm;window.doRun=doRun;window.setStatus=setStatus;window.deleteDeal=deleteDeal;window.prepPack=prepPack;
+boot();
+</script>
+</body>
+</html>
