@@ -2,7 +2,7 @@
 
 **A private AI sales coach for consultants.** Paste a meeting transcript, get an honest, evidence-backed score against **The Healthy Pipeline** framework — *Pain, Power, Vision, Value, Control* — and a concrete preparation plan for your next meeting.
 
-Consultants who sell their own expertise get no coaching. Sales tools are built for managers to inspect teams: recording bots, CRM dashboards, leaderboards. This project flips that. It is a **self-evaluation ritual**: after a customer meeting you paste the transcript, and instead of a generic summary you get an assessment against the methodology you were actually trained in — plus follow-up questions, preparation actions, and an agenda for the next conversation.
+Normally, consultants who sell their own expertise get no coaching. Sales tools are typically built for managers to inspect teams: recording bots, CRM dashboards, leaderboards. This project takes a different perspective. It is a **self-evaluation ritual**: after a customer meeting you paste the transcript, and instead of a generic summary you get an assessment against the methodology you were actually trained in — plus follow-up questions, preparation actions, and an agenda for the next conversation.
 
 ## Why this exists
 
