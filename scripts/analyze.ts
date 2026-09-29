@@ -11,6 +11,7 @@
 import { readFileSync } from "node:fs";
 import rubricJson from "../src/rubric/healthy-pipeline.v1.json";
 import { analyzeMeeting } from "../src/core/analyze.js";
+import { decodeTranscript } from "../src/core/encoding.js";
 import { parseTranscript, toCanonicalText } from "../src/core/transcriptParser.js";
 import type { Meeting, Rubric } from "../src/core/types.js";
 import { createProvider } from "../src/providers/factory.js";
@@ -28,9 +29,18 @@ if (!file) {
 }
 
 const rubric = rubricJson as Rubric;
-const parsed = parseTranscript(readFileSync(file, "utf8"));
+const decoded = decodeTranscript(new Uint8Array(readFileSync(file)));
+if (decoded.encoding !== "utf-8") console.log(`Encoding: ${decoded.encoding} (converted)`);
+const parsed = parseTranscript(decoded.text);
 for (const w of parsed.warnings) console.warn(`⚠ ${w}`);
 console.log(`Format: ${parsed.format} · Speakers: ${parsed.speakers.join(", ")} · Languages: ${parsed.languages.join(", ") || "unknown"}`);
+if (parsed.affiliations.length) {
+  // Companies in speaker labels must never reach the model — add them to the redaction terms.
+  process.env.HPC_REDACT_TERMS = [process.env.HPC_REDACT_TERMS, ...parsed.affiliations]
+    .filter(Boolean)
+    .join(",");
+  console.log(`Affiliations redacted: ${parsed.affiliations.join(", ")}`);
+}
 
 let seller = opt("seller");
 if (!seller) {

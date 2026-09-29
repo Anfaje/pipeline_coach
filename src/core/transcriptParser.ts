@@ -20,10 +20,12 @@ export interface Utterance {
 }
 
 export interface ParsedTranscript {
-  format: "teams" | "vtt" | "zoom" | "labeled" | "unlabeled";
+  format: "teams" | "vtt" | "zoom" | "labeled" | "block" | "unlabeled";
   utterances: Utterance[];
   /** Distinct speakers in order of first appearance. */
   speakers: string[];
+  /** Organizations lifted from speaker labels like "Name @Company". */
+  affiliations: string[];
   /** ISO 639-1 codes, dominant first. Currently detects da/en. */
   languages: string[];
   /** Non-fatal issues the app should surface (e.g. no speaker labels). */
@@ -63,6 +65,9 @@ const TEAMS_HEADER = /^(.{1,60}?)\s{1,}(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AP]M)?)$/
 const BRACKET_LINE = /^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*([^:]{1,60}?)\s*:\s*(.*)$/;
 // Generic labeled: "Name: text" (name without digits, reasonably short)
 const LABELED_LINE = /^([^\d:]{1,40}?)\s*:\s*(.+)$/;
+// Block format (e.g. some Teams/recorder exports): speaker on its own line,
+// then a time RANGE line "00:00 - 00:05", then the utterance text.
+const RANGE_LINE = /^\d{1,2}:\d{2}(?::\d{2})?\s*-\s*\d{1,2}:\d{2}(?::\d{2})?$/;
 
 const parseVtt = (lines: string[]): Utterance[] => {
   const out: Utterance[] = [];
@@ -115,6 +120,29 @@ const parseTeams = (lines: string[]): Utterance[] => {
     }
   }
   if (current) out.push(current);
+  return out;
+};
+
+const parseBlock = (lines: string[]): Utterance[] => {
+  const out: Utterance[] = [];
+  const isSpeakerAt = (i: number) =>
+    i + 1 < lines.length && RANGE_LINE.test(lines[i + 1] ?? "") && (lines[i] ?? "") !== "";
+  let i = 0;
+  while (i < lines.length) {
+    if (isSpeakerAt(i)) {
+      const speaker = lines[i]!;
+      const timestamp = lines[i + 1]!;
+      i += 2;
+      const text: string[] = [];
+      while (i < lines.length && !isSpeakerAt(i)) {
+        if (lines[i]) text.push(lines[i]!);
+        i++;
+      }
+      out.push({ speaker, text: text.join(" ").trim(), timestamp });
+    } else {
+      i++;
+    }
+  }
   return out;
 };
 
@@ -185,6 +213,11 @@ export function parseTranscript(raw: string): ParsedTranscript {
     format = "vtt";
     utterances = parseVtt(lines);
   } else if (
+    lines.filter((l, i) => RANGE_LINE.test(l) && i > 0 && lines[i - 1] !== "").length >= 2
+  ) {
+    format = "block";
+    utterances = parseBlock(lines);
+  } else if (
     lines.filter((l) => ZOOM_LINE.test(l)).length >= 2
   ) {
     format = "zoom";
@@ -207,6 +240,15 @@ export function parseTranscript(raw: string): ParsedTranscript {
     );
   }
 
+  // Lift affiliations out of speaker labels ("Morten Østergaard @Dovista").
+  const affiliations = new Set<string>();
+  for (const u of utterances) {
+    const m = u.speaker.match(/^(.*?)\s*@\s*(.+)$/);
+    if (m && m[1]!.trim()) {
+      u.speaker = m[1]!.trim();
+      affiliations.add(m[2]!.trim());
+    }
+  }
   utterances = coalesce(utterances);
   const speakers = [...new Set(utterances.map((u) => u.speaker))];
   if (speakers.length === 1 && speakers[0] !== UNKNOWN_SPEAKER) {
@@ -216,7 +258,7 @@ export function parseTranscript(raw: string): ParsedTranscript {
   const fullText = utterances.map((u) => u.text).join(" ");
   const languages = detectLanguages(fullText);
 
-  return { format, utterances, speakers, languages, warnings };
+  return { format, utterances, speakers, affiliations: [...affiliations], languages, warnings };
 }
 
 /** Canonical transcript text: what Meeting.transcript stores and what

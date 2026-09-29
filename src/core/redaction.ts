@@ -66,6 +66,8 @@ export interface RedactionOptions {
   speakers?: string[];
   /** User-maintained list of terms to always redact (own company, products, clients). */
   customTerms?: string[];
+  /** Organization names to always redact (e.g. lifted from "@Company" speaker labels). */
+  companies?: string[];
   /** Skip redacting these exact strings (e.g. placeholder-safe words). */
   allowList?: string[];
 }
@@ -128,6 +130,7 @@ export function buildRedactionMap(
 
   // 1. Custom terms — highest priority, exactly as given.
   for (const t of opts.customTerms ?? []) push(t.trim(), "term");
+  for (const c of opts.companies ?? []) push(c.trim(), "company");
 
   // 2. Speakers: full label, then each name part (so "Mads" alone is caught).
   for (const s of opts.speakers ?? []) {

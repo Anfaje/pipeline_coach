@@ -31,6 +31,7 @@ const speakersFromCanonical = (transcript: string): string[] => {
 
 export interface RedactingOptions {
   customTerms?: string[];
+  companies?: string[];
   allowList?: string[];
 }
 
@@ -55,6 +56,7 @@ export class RedactingProvider implements AnalysisProvider {
     const map = buildRedactionMap(meeting.transcript, {
       speakers: speakersFromCanonical(meeting.transcript),
       customTerms: this.opts.customTerms,
+      companies: this.opts.companies,
       allowList: this.opts.allowList,
     });
     this.lastMap = map;

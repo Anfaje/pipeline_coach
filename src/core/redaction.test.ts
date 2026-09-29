@@ -75,3 +75,14 @@ describe("redaction", () => {
     expect(r.text).toContain("2 uger");
   });
 });
+
+describe("company affiliations", () => {
+  it("redacts companies passed explicitly, wherever they appear", () => {
+    const r = redactTranscript("Peter Voss: Fjordglas har prøvet det før. Vi hos Fjordglas er skeptiske.", {
+      speakers: ["Peter Voss"],
+      companies: ["Fjordglas"],
+    });
+    expect(r.text).not.toContain("Fjordglas");
+    expect(r.map.some((e) => e.kind === "company" && e.original === "Fjordglas")).toBe(true);
+  });
+});

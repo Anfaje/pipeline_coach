@@ -102,3 +102,33 @@ Men det er også et spørgsmål om, hvem der ejer processen, ikke?`;
     expect(langs).toContain("en");
   });
 });
+
+describe("block format (speaker / time-range / text)", () => {
+  const raw = `Kirsten Holm
+00:00 - 00:04
+Så hvad er den største udfordring for jer lige nu?
+Peter Voss @Fjordglas
+00:05 - 00:12
+Vi mister alt for meget tid på reklamationer.
+Det er nok to uger per kvartal, hvis jeg skal være ærlig.
+Kirsten Holm
+00:13 - 00:15
+Og hvem ejer det problem hos jer?`;
+
+  it("parses blocks, joins multi-line text, keeps the range as timestamp", () => {
+    const p = parseTranscript(raw);
+    expect(p.format).toBe("block");
+    expect(p.utterances).toHaveLength(3);
+    expect(p.utterances[1]!.text).toContain("to uger per kvartal");
+    expect(p.utterances[0]!.timestamp).toBe("00:00 - 00:04");
+    expect(p.languages).toEqual(["da"]);
+  });
+
+  it("lifts @Company affiliations out of speaker labels", () => {
+    const p = parseTranscript(raw);
+    expect(p.speakers).toEqual(["Kirsten Holm", "Peter Voss"]);
+    expect(p.affiliations).toEqual(["Fjordglas"]);
+    expect(toCanonicalText(p)).toContain("Peter Voss: Vi mister");
+    expect(toCanonicalText(p)).not.toContain("@Fjordglas");
+  });
+});

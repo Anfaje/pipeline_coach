@@ -157,11 +157,23 @@ const ZOOM_LINE=/^(\d{2}:\d{2}:\d{2})\s+(?:From\s+)?([^:]{1,60}?)\s*:\s*(.*)$/;
 const TEAMS_HEADER=/^(.{1,60}?)\s{1,}(\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AP]M)?)$/i;
 const BRACKET_LINE=/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*([^:]{1,60}?)\s*:\s*(.*)$/;
 const LABELED_LINE=/^([^\d:]{1,40}?)\s*:\s*(.+)$/;
+const RANGE_LINE=/^\d{1,2}:\d{2}(?::\d{2})?\s*-\s*\d{1,2}:\d{2}(?::\d{2})?$/;
 function parseTranscript(raw){
   const lines=raw.replace(/\r\n?/g,"\n").split("\n").map(l=>l.trim());
   const warnings=[]; let format, utt=[];
   const labeled=l=>{const b=l.match(BRACKET_LINE); if(b) return {timestamp:b[1],speaker:b[2].trim(),text:b[3].trim()}; const m=l.match(LABELED_LINE); return m?{speaker:m[1].trim(),text:m[2].trim()}:null;};
-  if(lines.some(l=>l==="WEBVTT"||VTT_TIMING.test(l))){
+  if(lines.filter((l,i)=>RANGE_LINE.test(l)&&i>0&&lines[i-1]!=="").length>=2){
+    format="block";
+    const isSpk=i=>i+1<lines.length&&RANGE_LINE.test(lines[i+1]||"")&&(lines[i]||"")!=="";
+    let i=0;
+    while(i<lines.length){
+      if(isSpk(i)){
+        const speaker=lines[i],timestamp=lines[i+1];i+=2;const text=[];
+        while(i<lines.length&&!isSpk(i)){if(lines[i])text.push(lines[i]);i++;}
+        utt.push({speaker,text:text.join(" ").trim(),timestamp});
+      } else i++;
+    }
+  } else if(lines.some(l=>l==="WEBVTT"||VTT_TIMING.test(l))){
     format="vtt"; let ts;
     for(const line of lines){
       if(line===""||line==="WEBVTT"||/^\d+$/.test(line))continue;
@@ -196,10 +208,12 @@ function parseTranscript(raw){
     utt=[{speaker:"Unknown",text:lines.filter(Boolean).join(" ")}];
     warnings.push("No speaker labels detected. Scoring quality drops sharply without knowing who said what.");
   }
+  const affiliations=new Set();
+  for(const u of utt){const m=u.speaker.match(/^(.*?)\s*@\s*(.+)$/);if(m&&m[1].trim()){u.speaker=m[1].trim();affiliations.add(m[2].trim());}}
   const out=[]; for(const u of utt){const p=out[out.length-1]; if(p&&p.speaker===u.speaker)p.text=(p.text+" "+u.text).trim(); else out.push({...u});}
   const speakers=[...new Set(out.map(u=>u.speaker))];
   if(speakers.length===1&&speakers[0]!=="Unknown")warnings.push("Only one speaker detected — check that the whole conversation was pasted.");
-  return {format,utterances:out.filter(u=>u.text),speakers,warnings};
+  return {format,utterances:out.filter(u=>u.text),speakers,affiliations:[...affiliations],warnings};
 }
 const canonical = p => p.utterances.map(u=>`${u.speaker}: ${u.text}`).join("\n");
 const DA=new Set("og,det,ikke,jeg,vi,er,at,en,til,på,med,som,der,de,har,kan,skal,os,jer,hvad,hvordan,hvorfor,når,også,meget,lidt,bare,noget,vores,jeres,ugen,kroner,tak".split(","));
@@ -210,6 +224,26 @@ function detectLanguages(text){
   if(/[æøå]/i.test(text))da+=Math.max(3,Math.round(words.length*0.02));
   const total=da+en; if(!total)return [];
   return [["da",da],["en",en]].sort((a,b)=>b[1]-a[1]).filter(([,n])=>n>=Math.max(3,total*0.2)).map(([l])=>l);
+}
+
+/* ===================== File decoding (legacy encodings) ================ */
+function decodeTranscriptBytes(bytes){
+  try{return {text:new TextDecoder("utf-8",{fatal:true}).decode(bytes),encoding:"utf-8"};}catch(e){}
+  let best=null;
+  for(const encoding of ["windows-1252","macintosh","iso-8859-1"]){
+    let text; try{text=new TextDecoder(encoding).decode(bytes);}catch(e){continue;}
+    const score=((text.match(/[æøåÆØÅ]/g)||[]).length)-2*((text.match(/[ŒœŠš¯¿ŽžÃ¢\uFFFD]/g)||[]).length);
+    if(!best||score>best.score)best={text,encoding,score};
+  }
+  return best||{text:new TextDecoder("utf-8").decode(bytes),encoding:"utf-8 (lossy)"};
+}
+async function loadFile(input){
+  const f=input.files&&input.files[0]; if(!f)return;
+  const {text,encoding}=decodeTranscriptBytes(new Uint8Array(await f.arrayBuffer()));
+  const tr=$("tr"); tr.value=text;
+  S.draft.raw=text;
+  S.draft.encNote=encoding!=="utf-8"?`Converted from ${encoding} — æøå restored.`:"";
+  render();
 }
 
 /* ============================ Redaction =============================== */
@@ -501,8 +535,11 @@ function viewAnalyze(){
     <button class="quiet" onclick="go('deal','${deal.id}')">← ${escH(deal.customer)}</button>
     <h1>Analyze a meeting</h1>${stepsBar(1)}
     <div class="card">
-      <label for="tr">Transcript <span class="hint">— paste from Teams, Zoom or notes. It stays on this page until you approve what leaves.</span></label>
+      <label for="tr">Transcript <span class="hint">— paste from Teams, Zoom or notes, or load a .txt export below. It stays on this page until you approve what leaves.</span></label>
       <textarea id="tr" placeholder="Anna: Hvad er den største udfordring lige nu?&#10;Mads: Vi taber to uger per projekt på omarbejde…">${escH(d.raw)}</textarea>
+      <label for="tf">…or load a transcript file <span class="hint">— old exports with broken æøå are converted automatically.</span></label>
+      <input id="tf" type="file" accept=".txt,.vtt,text/plain" onchange="loadFile(this)">
+      ${d.encNote?`<div class="deal-meta" style="margin-top:6px">${escH(d.encNote)}</div>`:""}
       <div class="row">
         <div class="grow"><label for="md">Meeting date</label><input id="md" type="date" value="${d.date}"></div>
         <div class="grow"><label for="mg">Your goal for this meeting <span class="hint">(optional)</span></label><input id="mg" type="text" value="${escH(d.goal)}" placeholder="Confirm budget ownership"></div>
@@ -515,7 +552,7 @@ function viewAnalyze(){
     <h1>Who's who</h1>${stepsBar(2)}
     ${d.parsed.warnings.map(w=>`<div class="notice">${escH(w)}</div>`).join("")}
     <div class="card">
-      <p class="deal-meta" style="margin-top:0">Detected: ${d.parsed.format} format · ${d.parsed.speakers.length} speaker${d.parsed.speakers.length===1?"":"s"} · ${d.langs.map(l=>l==="da"?"Danish":"English").join(" + ")||"language unclear"}</p>
+      <p class="deal-meta" style="margin-top:0">Detected: ${d.parsed.format} format · ${d.parsed.speakers.length} speaker${d.parsed.speakers.length===1?"":"s"} · ${d.langs.map(l=>l==="da"?"Danish":"English").join(" + ")||"language unclear"}${(d.parsed.affiliations||[]).length?` · company in speaker labels: ${d.parsed.affiliations.map(escH).join(", ")} (added to always-hide)`:""}</p>
       <label>You are <span class="hint">— the seller. Never guessed, always asked.</span></label>
       ${d.parsed.speakers.map(s=>`<label style="font-weight:400;margin:6px 0"><input type="radio" name="seller" value="${escH(s)}" ${d.seller===s?"checked":""} onchange="S.draft.seller=this.value"> ${escH(s)}</label>`).join("")}
       <label for="terms">Always-hide terms <span class="hint">— added to what gets pseudonymized. Comma-separated.</span></label>
@@ -557,6 +594,7 @@ function doParse(){
   d.parsed=parseTranscript(d.raw);
   d.canonical=canonical(d.parsed);
   d.langs=detectLanguages(d.canonical);
+  for(const a of d.parsed.affiliations||[]){const cur=d.terms.split(",").map(t=>t.trim().toLowerCase());if(!cur.includes(a.toLowerCase()))d.terms=(d.terms?d.terms+", ":"")+a;}
   d.seller=d.parsed.speakers.length===1?d.parsed.speakers[0]:(d.parsed.speakers.includes(d.seller)?d.seller:null);
   d.step=2; render();
 }
@@ -704,7 +742,7 @@ function viewPrivacy(){
 }
 
 /* ------------------------------ start --------------------------------- */
-window.go=go;window.createDeal=createDeal;window.startAnalyze=startAnalyze;window.doParse=doParse;window.doRedact=doRedact;window.addTerm=addTerm;window.doRun=doRun;window.setStatus=setStatus;window.deleteDeal=deleteDeal;window.prepPack=prepPack;
+window.loadFile=loadFile;window.go=go;window.createDeal=createDeal;window.startAnalyze=startAnalyze;window.doParse=doParse;window.doRedact=doRedact;window.addTerm=addTerm;window.doRun=doRun;window.setStatus=setStatus;window.deleteDeal=deleteDeal;window.prepPack=prepPack;
 boot();
 </script>
 </body>
