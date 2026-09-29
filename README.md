@@ -52,7 +52,14 @@ Analyze a transcript from the command line:
 export ANTHROPIC_API_KEY=sk-ant-...
 
 npm run analyze -- meeting.txt --seller "Anna"
+#               ^^ the standalone "--" matters: npm only passes arguments
+#                  through after it. Or skip npm entirely:
+npx tsx scripts/analyze.ts meeting.txt --seller "Anna"
 ```
+
+`--seller` accepts a first name or any unique part of the speaker label —
+`--seller johan` finds "Johan Broberg Binder". Legacy file encodings
+(windows-1252, Mac Roman) are detected and converted automatically.
 
 The parser accepts Teams copy-outs, WebVTT exports, Zoom transcripts, plain `Speaker: text` lines, or unstructured notes (with a warning — scoring quality drops without speakers). It detects Danish/English/mixed automatically and never guesses who the seller is: with multiple speakers, pass `--seller` with your speaker label.
 

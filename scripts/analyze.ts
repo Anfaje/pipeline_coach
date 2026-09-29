@@ -13,6 +13,7 @@ import rubricJson from "../src/rubric/healthy-pipeline.v1.json";
 import { analyzeMeeting } from "../src/core/analyze.js";
 import { decodeTranscript } from "../src/core/encoding.js";
 import { parseTranscript, toCanonicalText } from "../src/core/transcriptParser.js";
+import { resolveSpeaker } from "../src/core/speakers.js";
 import type { Meeting, Rubric } from "../src/core/types.js";
 import { createProvider } from "../src/providers/factory.js";
 
@@ -24,7 +25,16 @@ const opt = (name: string): string | undefined => {
 };
 
 if (!file) {
-  console.error("Usage: npm run analyze -- <transcript-file> --seller <label> [--provider <name>] [--goal <text>]");
+  console.error(
+    [
+      "Usage:",
+      '  npm run analyze -- <transcript-file> --seller <name> [--goal <text>] [--provider <name>]',
+      "",
+      'Note the standalone "--" (with spaces around it) after "analyze": npm only passes',
+      "arguments through after it. Without it, npm swallows your flags. Equivalent without npm:",
+      '  npx tsx scripts/analyze.ts <transcript-file> --seller <name>',
+    ].join("\n"),
+  );
   process.exit(1);
 }
 
@@ -42,18 +52,27 @@ if (parsed.affiliations.length) {
   console.log(`Affiliations redacted: ${parsed.affiliations.join(", ")}`);
 }
 
-let seller = opt("seller");
-if (!seller) {
+let seller: string;
+const sellerArg = opt("seller");
+if (!sellerArg) {
   if (parsed.speakers.length === 1) {
     seller = parsed.speakers[0]!;
   } else {
-    console.error(`Multiple speakers detected (${parsed.speakers.join(", ")}). The parser never guesses who the seller is — pass --seller <label>.`);
+    console.error(`Multiple speakers detected (${parsed.speakers.join(", ")}). The parser never guesses who the seller is — pass --seller <name>.`);
     process.exit(1);
   }
-}
-if (!parsed.speakers.includes(seller)) {
-  console.error(`--seller "${seller}" is not among detected speakers: ${parsed.speakers.join(", ")}`);
-  process.exit(1);
+} else {
+  const r = resolveSpeaker(sellerArg, parsed.speakers);
+  if (!r.speaker) {
+    console.error(
+      r.matches.length
+        ? `--seller "${sellerArg}" is ambiguous between: ${r.matches.join(", ")}. Be more specific.`
+        : `--seller "${sellerArg}" doesn't match any detected speaker: ${parsed.speakers.join(", ")}`,
+    );
+    process.exit(1);
+  }
+  seller = r.speaker;
+  if (seller !== sellerArg) console.log(`Seller: "${sellerArg}" → ${seller}`);
 }
 
 const meeting: Meeting = {
