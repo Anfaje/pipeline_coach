@@ -9,7 +9,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "ci": "npm run typecheck && npm run test",
-    "analyze": "tsx scripts/analyze.ts"
+    "analyze": "tsx scripts/analyze.ts",
+    "preanalyze": "node -e \"require('fs').existsSync('node_modules/tsx')||(console.error('\\nDependencies are missing or outdated. Run:\\n\\n  npm install\\n\\nthen re-run your command.'),process.exit(1))\""
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
