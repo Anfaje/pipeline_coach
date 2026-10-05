@@ -14,6 +14,8 @@ import { analyzeMeeting } from "../src/core/analyze.js";
 import { decodeTranscript } from "../src/core/encoding.js";
 import { parseTranscript, toCanonicalText } from "../src/core/transcriptParser.js";
 import { resolveSpeaker } from "../src/core/speakers.js";
+import { addMeeting, loadDeal, saveDeal } from "../src/core/dealStore.js";
+import { renderDealState } from "../src/core/renderDeal.js";
 import type { Meeting, Rubric } from "../src/core/types.js";
 import { createProvider } from "../src/providers/factory.js";
 
@@ -28,7 +30,10 @@ if (!file) {
   console.error(
     [
       "Usage:",
-      '  npm run analyze -- <transcript-file> --seller <name> [--goal <text>] [--provider <name>]',
+      '  npm run analyze -- <transcript-file> --seller <name> [--deal <name>] [--date YYYY-MM-DD] [--goal <text>] [--provider <name>]',
+      "",
+      "--deal attaches this meeting to a named deal (stored locally in .hpc/) and prints",
+      "the merged deal state afterwards — scores accumulate across meetings with staleness.",
       "",
       'Note the standalone "--" (with spaces around it) after "analyze": npm only passes',
       "arguments through after it. Without it, npm swallows your flags. Equivalent without npm:",
@@ -75,11 +80,13 @@ if (!sellerArg) {
   if (seller !== sellerArg) console.log(`Seller: "${sellerArg}" → ${seller}`);
 }
 
+const dealName = opt("deal");
+const deal = dealName ? loadDeal(process.cwd(), dealName) : null;
 const meeting: Meeting = {
   id: `cli-${Date.now()}`,
-  dealId: "cli",
-  date: new Date().toISOString().slice(0, 10),
-  sequence: 1,
+  dealId: deal ? dealName! : "cli",
+  date: opt("date") ?? new Date().toISOString().slice(0, 10),
+  sequence: deal ? deal.meetings.length + 1 : 1,
   languages: parsed.languages,
   transcript: toCanonicalText(parsed),
   sellerSpeaker: seller,
@@ -106,3 +113,20 @@ if (analysis.missedSignals.length) {
 }
 console.log(`\nVerdict: ${analysis.verdict}`);
 if (analysis.degraded) console.log("⚠ Analysis degraded: some cited evidence could not be verified; affected scores were capped.");
+
+if (deal && dealName) {
+  addMeeting(deal, {
+    id: meeting.id,
+    date: meeting.date,
+    source: file.split("/").pop() ?? file,
+    sellerSpeaker: meeting.sellerSpeaker,
+    languages: meeting.languages,
+    analysis,
+  });
+  const savedTo = saveDeal(process.cwd(), deal);
+  console.log(`\nSaved as meeting ${deal.meetings.length} of deal "${dealName}" (${savedTo})`);
+  console.log("");
+  console.log(renderDealState(rubric, deal));
+} else {
+  console.log('\nTip: add --deal <name> to accumulate meetings on one account — scores then merge across meetings ("best evidence to date", with staleness decay) instead of each analysis standing alone.');
+}
