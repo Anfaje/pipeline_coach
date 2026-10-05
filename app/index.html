@@ -331,6 +331,7 @@ goalPh?`The seller's stated goal for this meeting: ${goalPh}`:"",
 `\n## Seller craft (separate per-meeting skill scores for the SELLER, not the deal)\nBands:\n${RUBRIC.sellerCraft.bands.map(b=>`${b.min}-${b.max} ${b.label}: ${b.desc}`).join("\n")}\n\n${RUBRIC.sellerCraft.metrics.map(m=>`### ${m.name} (key: ${m.key})\nDefinition: ${m.definition}\nGuidance: ${m.guidance}`).join("\n\n")}`,
 `\n## Hard rules
 - Every dimension score above 3 MUST cite 1-3 VERBATIM quotes from the transcript, each with its speaker label. Copy character-for-character; never paraphrase.
+- Keep every quote SHORT: the most probative span of at most ~25 words, never a whole paragraph.
 - Content stated by the seller and merely acknowledged by the customer is confidence "seller_assumed"; the same content stated by the customer is "customer_stated". Seller-assumed evidence cannot score above 6.
 - List happy-ears findings: assumptions the seller treated as confirmed that the customer never stated. Also list missed buying signals.
 - Seller-craft rules: curiosity "misses" must quote the participant's statement VERBATIM and draft the clarifying question the seller could have asked, in the transcript's dominant language, natural and consultative. Framing has two checkpoints (opening, closing); if either is missing, the combined framing score is at most 6.`,
@@ -673,7 +674,7 @@ async function doRun(){
     go("meeting",mid);
   }catch(e){
     S.busy="";S.draft.step=3;render();
-    const msg=e&&e.code==="not_granted"?"You declined AI access for this page — the analysis can't run without it.":"The analysis failed: "+escH(e.message||String(e));
+    const msg=e&&e.code==="not_granted"?"You declined AI access for this page — the analysis can't run without it.":e&&e.code==="invalid_json"?"The analysis came back too long and was cut off before it finished. Run it again — with shorter quotes requested it almost always fits on the second try.":"The analysis failed: "+escH(e.message||String(e));
     const el=$("app");el.insertAdjacentHTML("afterbegin",`<div class="notice">${msg}</div>`);
   }
 }

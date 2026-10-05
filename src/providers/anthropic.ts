@@ -8,9 +8,10 @@ import type { AnalysisProvider } from "./types.js";
  * https://docs.claude.com/en/api/overview for current models and options.
  *
  * Env:
- *   ANTHROPIC_API_KEY  (required)
- *   ANTHROPIC_MODEL    (default: claude-sonnet-4-6)
- *   ANTHROPIC_BASE_URL (default: https://api.anthropic.com)
+ *   ANTHROPIC_API_KEY     (required)
+ *   ANTHROPIC_MODEL       (default: claude-sonnet-4-6)
+ *   ANTHROPIC_BASE_URL    (default: https://api.anthropic.com)
+ *   ANTHROPIC_MAX_TOKENS  (default: 16000 — rubric v2 responses are large)
  */
 
 const buildPrompt = (
@@ -48,7 +49,8 @@ const buildPrompt = (
     `\n## Score bands (0-10)\n${bands}`,
     craftSection,
     `\n## Hard rules`,
-    `- Every dimension score above 3 MUST cite 1-3 VERBATIM quotes from the transcript, each with its speaker label. Copy quotes character-for-character; never paraphrase.`,
+    `- Every dimension score above 3 MUST cite 1-3 VERBATIM quotes from the transcript, each with its speaker label. Copy quotes character-for-character; never paraphrase.
+- Keep every quote SHORT: the most probative span of at most ~25 words, never a whole paragraph. A short verbatim excerpt beats a long one.`,
     `- A statement made by the seller and merely acknowledged by the customer is confidence "seller_assumed"; the same content stated by the customer is "customer_stated". Seller-assumed evidence cannot score above 6.`,
     `- Also list happy-ears findings (assumptions the seller treated as confirmed that the customer never stated) and missed buying signals.`,
     craft
@@ -73,12 +75,14 @@ export class AnthropicProvider implements AnalysisProvider {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly baseUrl: string;
+  private readonly maxTokens: number;
 
   constructor(opts?: { apiKey?: string; model?: string; baseUrl?: string }) {
     this.apiKey = opts?.apiKey ?? process.env.ANTHROPIC_API_KEY ?? "";
     this.model = opts?.model ?? process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
     this.baseUrl =
       opts?.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com";
+    this.maxTokens = Number.parseInt(process.env.ANTHROPIC_MAX_TOKENS ?? "", 10) || 16000;
     this.id = `anthropic:${this.model}`;
     if (!this.apiKey) {
       throw new Error("ANTHROPIC_API_KEY is not set");
@@ -99,7 +103,7 @@ export class AnthropicProvider implements AnalysisProvider {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 4000,
+        max_tokens: this.maxTokens,
         temperature: 0,
         messages: [
           {
@@ -118,13 +122,27 @@ export class AnthropicProvider implements AnalysisProvider {
     }
     const data = (await res.json()) as {
       content: Array<{ type: string; text?: string }>;
+      stop_reason?: string;
     };
+    if (data.stop_reason === "max_tokens") {
+      throw new Error(
+        `The model's response was truncated at ${this.maxTokens} tokens (stop_reason: max_tokens) — the JSON is incomplete. Raise the limit, e.g. ANTHROPIC_MAX_TOKENS=${this.maxTokens * 2}, and re-run.`,
+      );
+    }
     const text = data.content
       .filter((b) => b.type === "text" && typeof b.text === "string")
       .map((b) => b.text)
       .join("\n");
     const clean = text.replace(/```json|```/g, "").trim();
-    return coerceMeetingAnalysis(JSON.parse(clean), {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (e) {
+      throw new Error(
+        `The model's response was not valid JSON (${(e as Error).message}). This usually means truncation or formatting drift — re-running usually succeeds; if it recurs, raise ANTHROPIC_MAX_TOKENS (current: ${this.maxTokens}).`,
+      );
+    }
+    return coerceMeetingAnalysis(parsed, {
       meetingId: input.meeting.id,
       rubric: input.rubric,
     });
