@@ -389,9 +389,10 @@ function deredactAnalysis(a,map){
 }
 
 /* ====================== Deal-level score merge ======================== */
-function mergeDealScores(meetings){
+function mergeDealScores(dateOrdered){
+  const meetings=dateOrdered.map((m,i)=>({...m,sequence:i+1}));
   if(!meetings.length)return [];
-  const latest=Math.max(...meetings.map(m=>m.sequence));
+  const latest=meetings.length;
   return RUBRIC.dimensions.map(dim=>{
     let best=null;
     for(const m of meetings){
@@ -456,7 +457,8 @@ async function refresh(){
   S.meetings=all.filter(d=>d.type==="meeting");
   render();
 }
-const dealMeetings=dealId=>S.meetings.filter(m=>m.dealId===dealId).sort((a,b)=>a.sequence-b.sequence);
+const dealMeetings=dealId=>S.meetings.filter(m=>m.dealId===dealId).sort((a,b)=>((a.date||"").localeCompare(b.date||""))||((a.sequence||0)-(b.sequence||0)));
+async function sha16(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s.replace(/\s+/g," ").trim()));return [...new Uint8Array(b)].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("");}
 function go(view,arg){
   S.view=view;
   if(view==="deal"){S.deal=S.deals.find(d=>d.id===arg)||S.deal;S.draft=null;}
@@ -530,9 +532,9 @@ function viewDeal(){
   const d=S.deal; if(!d)return viewHome();
   const ms=dealMeetings(d.id);
   const scores=mergeDealScores(ms);
-  const meetings=ms.map(m=>`
+  const meetings=ms.map((m,i)=>`
     <div class="deal-item" onclick="go('meeting','${m.id}')" role="button" tabindex="0">
-      <div><div class="deal-name">Meeting ${m.sequence} · ${escH(m.date)}</div>
+      <div><div class="deal-name">Meeting ${i+1} · ${escH(m.date)}</div>
       <div class="deal-meta">${escH((m.analysis?.verdict||"").slice(0,110))}</div></div>
     </div>`).join("");
   return `
@@ -658,9 +660,12 @@ async function doRun(){
     const goalPh=d.goal?redact(d.goal,d.map):"";
     const raw=await runAnalysis(S.sample,d.redacted,sellerPh,goalPh,d.langs.length?d.langs:["en"],t=>{S.busy=t;render();});
     const analysis=deredactAnalysis(raw,d.map);
-    const seq=dealMeetings(deal.id).length+1;
-    const mid="meeting_"+uid();
-    const meeting={type:"meeting",dealId:deal.id,date:d.date,sequence:seq,languages:d.langs,
+    const hash=await sha16(d.canonical);
+    const existing=dealMeetings(deal.id).find(m=>m.transcriptHash===hash||m.transcript===d.canonical);
+    const mid=existing?existing.id:"meeting_"+uid();
+    const seq=existing?existing.sequence:dealMeetings(deal.id).length+1;
+    S.revised=!!existing;
+    const meeting={type:"meeting",dealId:deal.id,date:d.date,sequence:seq,transcriptHash:hash,languages:d.langs,
       transcript:d.canonical,sellerSpeaker:d.seller,sellerGoal:d.goal,
       redactionMap:d.map,analysis,createdAt:new Date().toISOString()};
     await store.save(mid,meeting);
@@ -685,7 +690,8 @@ function viewMeeting(){
   const a=m.analysis;
   return `
     <button class="quiet" onclick="go('deal','${m.dealId}')">← ${escH(deal?deal.customer:"Deal")}</button>
-    <h1>Meeting ${m.sequence} · ${escH(m.date)}</h1>
+    <h1>Meeting ${dealMeetings(m.dealId).findIndex(x=>x.id===m.id)+1} · ${escH(m.date)}</h1>
+    ${S.revised?(S.revised=false,`<div class="notice" style="background:var(--pine-soft);color:var(--pine-deep)">Same transcript as an earlier analysis — the stored result was revised, not duplicated.</div>`):""}
     ${a.degraded?`<div class="notice">Some cited evidence couldn't be verified word-for-word, so the affected scores were capped. Treat this analysis with extra skepticism.</div>`:""}
     <p class="verdict">${escH(a.verdict)}</p>
     <div class="card">

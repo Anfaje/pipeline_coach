@@ -3,7 +3,7 @@
  *   npm run deal -- <name>     npm run deal
  */
 import rubricJson from "../src/rubric/healthy-pipeline.v2.json";
-import { listDeals, loadDeal } from "../src/core/dealStore.js";
+import { listDeals, loadDeal, normalizeDeal, saveDeal } from "../src/core/dealStore.js";
 import { renderDealState } from "../src/core/renderDeal.js";
 import type { Rubric } from "../src/core/types.js";
 
@@ -14,6 +14,11 @@ if (!name) {
   process.exit(0);
 }
 const deal = loadDeal(process.cwd(), name);
+const collapsed = normalizeDeal(deal);
+if (collapsed > 0) {
+  saveDeal(process.cwd(), deal);
+  console.log(`Cleaned up ${collapsed} duplicate entr${collapsed === 1 ? "y" : "ies"} from earlier re-runs.\n`);
+}
 if (!deal.meetings.length) {
   console.log(`Deal "${name}" has no analyzed meetings yet.`);
   process.exit(0);

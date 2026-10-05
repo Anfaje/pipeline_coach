@@ -14,7 +14,7 @@ import { analyzeMeeting } from "../src/core/analyze.js";
 import { decodeTranscript } from "../src/core/encoding.js";
 import { parseTranscript, toCanonicalText } from "../src/core/transcriptParser.js";
 import { resolveSpeaker } from "../src/core/speakers.js";
-import { addMeeting, loadDeal, saveDeal } from "../src/core/dealStore.js";
+import { loadDeal, saveDeal, transcriptHash, upsertMeeting } from "../src/core/dealStore.js";
 import { renderDealState } from "../src/core/renderDeal.js";
 import type { Meeting, Rubric } from "../src/core/types.js";
 import { createProvider } from "../src/providers/factory.js";
@@ -136,16 +136,23 @@ console.log(`\nVerdict: ${analysis.verdict}`);
 if (analysis.degraded) console.log("⚠ Analysis degraded: some cited evidence could not be verified; affected scores were capped.");
 
 if (deal && dealName) {
-  addMeeting(deal, {
+  const { stored, replaced, collapsed } = upsertMeeting(deal, {
     id: meeting.id,
     date: meeting.date,
+    transcriptHash: transcriptHash(meeting.transcript),
     source: file.split("/").pop() ?? file,
     sellerSpeaker: meeting.sellerSpeaker,
     languages: meeting.languages,
     analysis,
   });
   const savedTo = saveDeal(process.cwd(), deal);
-  console.log(`\nSaved as meeting ${deal.meetings.length} of deal "${dealName}" (${savedTo})`);
+  console.log(
+    replaced
+      ? `\nSame transcript as before — revised the analysis of meeting ${stored.sequence} of deal "${dealName}" (not added again).`
+      : `\nSaved as meeting ${stored.sequence} of deal "${dealName}" (${savedTo})`,
+  );
+  if (collapsed > 0)
+    console.log(`Cleaned up ${collapsed} duplicate entr${collapsed === 1 ? "y" : "ies"} from earlier re-runs.`);
   console.log("");
   console.log(renderDealState(rubric, deal));
 } else {

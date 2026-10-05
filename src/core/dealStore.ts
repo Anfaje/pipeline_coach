@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { MeetingAnalysis } from "./types.js";
@@ -14,6 +15,9 @@ export interface StoredMeeting {
   id: string;
   date: string;
   sequence: number;
+  /** Content fingerprint of the canonical transcript — the identity of a
+   *  meeting. Re-analyzing the same transcript REPLACES, never duplicates. */
+  transcriptHash?: string;
   /** Source file name, for the user's own reference. */
   source: string;
   sellerSpeaker: string;
@@ -47,13 +51,48 @@ export function saveDeal(baseDir: string, deal: DealFile): string {
   return p;
 }
 
-export function addMeeting(
+/** Whitespace-insensitive content fingerprint of a canonical transcript. */
+export const transcriptHash = (canonical: string): string =>
+  createHash("sha256").update(canonical.replace(/\s+/g, " ").trim()).digest("hex").slice(0, 16);
+
+/** Meeting identity: content hash when present, else source file name (legacy entries). */
+const meetingKey = (m: { transcriptHash?: string; source: string }): string =>
+  m.transcriptHash ? `h:${m.transcriptHash}` : `s:${m.source}`;
+
+/**
+ * Normalize a deal in place: collapse duplicates (same transcript analyzed
+ * more than once keeps only the MOST RECENT analysis), order meetings by
+ * date, and renumber sequences 1..n. Returns how many duplicates collapsed.
+ */
+export function normalizeDeal(deal: DealFile): number {
+  const byKey = new Map<string, StoredMeeting>();
+  for (const m of deal.meetings) byKey.set(meetingKey(m), m); // later wins
+  const collapsed = deal.meetings.length - byKey.size;
+  deal.meetings = [...byKey.values()].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  deal.meetings.forEach((m, i) => (m.sequence = i + 1));
+  return collapsed;
+}
+
+/**
+ * Add or replace a meeting by content identity, then normalize. Re-running
+ * the same transcript revises the stored analysis instead of appending.
+ */
+export function upsertMeeting(
   deal: DealFile,
   meeting: Omit<StoredMeeting, "sequence">,
-): StoredMeeting {
-  const stored: StoredMeeting = { ...meeting, sequence: deal.meetings.length + 1 };
-  deal.meetings.push(stored);
-  return stored;
+): { stored: StoredMeeting; replaced: boolean; collapsed: number } {
+  const key = meetingKey(meeting);
+  const existingIdx = deal.meetings.findIndex((m) => meetingKey(m) === key);
+  const replaced = existingIdx >= 0;
+  const stored: StoredMeeting = {
+    ...meeting,
+    sequence: replaced ? deal.meetings[existingIdx]!.sequence : deal.meetings.length + 1,
+    id: replaced ? deal.meetings[existingIdx]!.id : meeting.id,
+  };
+  if (replaced) deal.meetings[existingIdx] = stored;
+  else deal.meetings.push(stored);
+  const collapsed = normalizeDeal(deal) - (0);
+  return { stored, replaced, collapsed };
 }
 
 export function listDeals(baseDir: string): string[] {
