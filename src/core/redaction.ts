@@ -133,8 +133,11 @@ export function buildRedactionMap(
   for (const c of opts.companies ?? []) push(c.trim(), "company");
 
   // 2. Speakers: full label, then each name part (so "Mads" alone is caught).
+  // Undiarized recorder labels ("Speaker 3", "Speaker -1") are not identities
+  // and would only add noise, so they are skipped.
   for (const s of opts.speakers ?? []) {
     const label = s.trim();
+    if (/^speaker\s*-?\d+$/i.test(label) || /^unknown$/i.test(label)) continue;
     push(label, "person");
     for (const part of label.split(/\s+/)) {
       if (part.length >= 3) push(part, "person");
@@ -172,6 +175,9 @@ export function redactText(text: string, map: RedactionEntry[]): string {
 
 /** Reverse a map: placeholders → real. Genitive suffixes survive (PERSON_1s → Annas). */
 export function unredactText(text: string, map: RedactionEntry[]): string {
+  // Defensive: upstream coercion should guarantee strings, but a crash here
+  // destroys an already-paid analysis, so degrade gracefully instead.
+  if (typeof text !== "string") return text == null ? "" : String(text);
   let out = text;
   for (const e of map) {
     out = out.replace(

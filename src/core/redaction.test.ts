@@ -86,3 +86,13 @@ describe("company affiliations", () => {
     expect(r.map.some((e) => e.kind === "company" && e.original === "Fjordglas")).toBe(true);
   });
 });
+
+describe("undiarized speakers", () => {
+  it("does not treat recorder labels like 'Speaker 3' as person names", () => {
+    const r = redactTranscript("Speaker 3: Vi skal nok kigge på det. Den speaker vi købte er fin.", {
+      speakers: ["Speaker 3", "Johan Binder"],
+    });
+    expect(r.text).toContain("Speaker 3:");
+    expect(r.map.some((e) => e.original.toLowerCase().includes("speaker"))).toBe(false);
+  });
+});

@@ -1,3 +1,4 @@
+import { coerceMeetingAnalysis } from "../core/coerce.js";
 import type { Meeting, MeetingAnalysis, Rubric } from "../core/types.js";
 import type { AnalysisProvider } from "./types.js";
 
@@ -103,15 +104,9 @@ export class AnthropicProvider implements AnalysisProvider {
       .map((b) => b.text)
       .join("\n");
     const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean) as Omit<
-      MeetingAnalysis,
-      "meetingId" | "rubricId" | "rubricVersion"
-    >;
-    return {
-      ...parsed,
+    return coerceMeetingAnalysis(JSON.parse(clean), {
       meetingId: input.meeting.id,
-      rubricId: input.rubric.id,
-      rubricVersion: input.rubric.version,
-    };
+      rubric: input.rubric,
+    });
   }
 }

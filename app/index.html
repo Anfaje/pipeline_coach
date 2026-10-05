@@ -212,6 +212,8 @@ function parseTranscript(raw){
   for(const u of utt){const m=u.speaker.match(/^(.*?)\s*@\s*(.+)$/);if(m&&m[1].trim()){u.speaker=m[1].trim();affiliations.add(m[2].trim());}}
   const out=[]; for(const u of utt){const p=out[out.length-1]; if(p&&p.speaker===u.speaker)p.text=(p.text+" "+u.text).trim(); else out.push({...u});}
   const speakers=[...new Set(out.map(u=>u.speaker))];
+  const undiar=speakers.filter(s=>/^speaker\s*-?\d+$/i.test(s));
+  if(undiar.length){const n=out.filter(u=>undiar.includes(u.speaker)).length;warnings.push(n+" segment"+(n===1?"":"s")+" couldn't be attributed to a named person ("+undiar.join(", ")+") — the recorder lost track of who spoke.");}
   if(speakers.length===1&&speakers[0]!=="Unknown")warnings.push("Only one speaker detected — check that the whole conversation was pasted.");
   return {format,utterances:out.filter(u=>u.text),speakers,affiliations:[...affiliations],warnings};
 }
@@ -285,7 +287,7 @@ function buildMap(text,{speakers=[],customTerms=[],seed=[]}={}){
     entries.push({original,kind,placeholder:`${PREFIX[kind]}_${counters[kind]}`});
   };
   for(const t of customTerms)push(t,"term");
-  for(const s of speakers){push(s,"person");for(const p of s.split(/\s+/))if(p.length>=3)push(p,"person");}
+  for(const s of speakers){if(/^speaker\s*-?\d+$/i.test(s.trim())||/^unknown$/i.test(s.trim()))continue;push(s,"person");for(const p of s.split(/\s+/))if(p.length>=3)push(p,"person");}
   for(const m of text.match(EMAIL_RE)||[])push(m,"email");
   for(const m of text.match(PHONE_RE)||[])push(m,"phone");
   for(const m of text.match(COMPANY_RE)||[])push(m,"company");
@@ -294,7 +296,7 @@ function buildMap(text,{speakers=[],customTerms=[],seed=[]}={}){
   return entries;
 }
 const redact=(text,map)=>{let out=text;for(const e of map)out=out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${esc(e.original)}(s)?(?![\\p{L}\\p{N}_])`,"gu"),(m,s)=>e.placeholder+(s||""));return out;};
-const unredact=(text,map)=>{let out=text;for(const e of map)out=out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${esc(e.placeholder)}(s)?(?![\\p{L}\\p{N}_])`,"gu"),(m,s)=>e.original+(s||""));return out;};
+const unredact=(text,map)=>{if(typeof text!=="string")return text==null?"":String(text);let out=text;for(const e of map)out=out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${esc(e.placeholder)}(s)?(?![\\p{L}\\p{N}_])`,"gu"),(m,s)=>e.original+(s||""));return out;};
 
 /* ======================= Quote validation ============================= */
 const norm=s=>s.toLowerCase().replace(/[\u2018\u2019\u201A\u201B]/g,"'").replace(/[\u201C\u201D\u201E\u201F]/g,'"').replace(/[\u2013\u2014]/g,"-").replace(/\s+/g," ").trim();
@@ -326,12 +328,12 @@ Respond with ONLY a JSON object, no markdown fences:
 async function runAnalysis(sampleFn,redactedTranscript,sellerPh,goalPh,langs,onStatus){
   const attempt=async fb=>sampleFn.json(analysisPrompt(redactedTranscript,sellerPh,goalPh,langs,fb));
   onStatus("Scoring the five dimensions…");
-  let a=await attempt();
+  let a=coerceAnalysis(await attempt());
   const check=x=>{const fails=[];for(const d of x.dimensions||[]){if(d.score>3){if(!d.evidence||!d.evidence.length){fails.push(`${d.dimensionKey}: score ${d.score} with no evidence`);continue;}for(const q of invalidQuotes(redactedTranscript,d.evidence))fails.push(`${d.dimensionKey}: quote not found verbatim: "${q.text}"`);}}return fails;};
   let fails=check(a);
   if(fails.length){
     onStatus("Verifying evidence — asking for exact quotes…");
-    a=await attempt("Some cited quotes were not found verbatim in the transcript. Re-analyze and cite only exact verbatim passages. Failures:\n"+fails.join("\n"));
+    a=coerceAnalysis(await attempt("Some cited quotes were not found verbatim in the transcript. Re-analyze and cite only exact verbatim passages. Failures:\n"+fails.join("\n")));
     fails=check(a);
     if(fails.length){
       a.degraded=true;

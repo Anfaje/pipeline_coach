@@ -251,6 +251,13 @@ export function parseTranscript(raw: string): ParsedTranscript {
   }
   utterances = coalesce(utterances);
   const speakers = [...new Set(utterances.map((u) => u.speaker))];
+  const undiarized = speakers.filter((s) => /^speaker\s*-?\d+$/i.test(s));
+  if (undiarized.length) {
+    const n = utterances.filter((u) => undiarized.includes(u.speaker)).length;
+    warnings.push(
+      `${n} segment${n === 1 ? "" : "s"} could not be attributed to a named person (${undiarized.join(", ")}) — the recorder lost track of who spoke.`,
+    );
+  }
   if (speakers.length === 1 && speakers[0] !== UNKNOWN_SPEAKER) {
     warnings.push("Only one speaker detected; check that the paste included the whole conversation.");
   }
