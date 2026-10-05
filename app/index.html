@@ -133,7 +133,7 @@ ul.clean{padding-left:20px}
 "use strict";
 /* ============================== Rubric ================================= */
 const RUBRIC = {
-  id:"healthy-pipeline", version:"1.0.0", name:"The Healthy Pipeline",
+  id:"healthy-pipeline", version:"2.0.0", name:"The Healthy Pipeline",
   staleness:{meetingsBeforeDecay:2, decayBands:1},
   bands:[
     {min:0,max:3,label:"not addressed",cls:"band-low"},
@@ -146,9 +146,22 @@ const RUBRIC = {
     {key:"power",name:"Power",definition:"We know who owns the budget and the decision, and we are talking to them or have a credible, agreed path to them.",guidance:"Look for named roles, budget ownership, the decision process, and explicit requests for or grants of access to the economic buyer. A title alone is not power; confirmed decision authority is."},
     {key:"vision",name:"Vision",definition:"The customer holds a concrete vision of solving the problem with our capabilities — ideally one they helped build.",guidance:"Look for the customer describing a future state ('if we could X, then we would Y') connected to the seller's offering. Co-creation scores higher than passive acceptance of the seller's pitch."},
     {key:"value",name:"Value",definition:"The value is quantified and agreed by the customer — not merely claimed by the seller.",guidance:"Look for numbers: hours, money, risk — and for who states them. Customer-stated or customer-confirmed quantification scores high; seller-claimed ROI with no customer confirmation stays in the unverified band."},
-    {key:"control",name:"Control",definition:"The seller controls the process: a clear, mutually agreed next step with owners, dates, and a path to decision.",guidance:"Look at how the meeting ends. A scheduled next meeting with agreed purpose, participants and dates scores high. 'Send me some material' with no commitment scores low."}
-  ]
+    {key:"control",name:"Control",definition:"The seller controls the DEAL process: a clear, mutually agreed next step with owners, dates, and a path to decision.",guidance:"Score the deal's forward motion, not meeting hygiene (that is the Framing craft metric). A scheduled next meeting with agreed purpose, participants and dates scores high. 'Send me some material' with no commitment scores low."}
+  ],
+  sellerCraft:{
+    bands:[
+      {min:0,max:3,label:"absent",desc:"The behavior is essentially missing from the meeting."},
+      {min:4,max:6,label:"inconsistent",desc:"Present in places, skipped in others; shallow where depth was available."},
+      {min:7,max:8,label:"deliberate",desc:"Consistent, intentional practice through the meeting."},
+      {min:9,max:10,label:"masterful",desc:"Systematic and generative: it visibly produces measurable or actionable material."}
+    ],
+    metrics:[
+      {key:"curiosity",name:"Curiosity",definition:"The seller asks clarifying questions to statements — staying curious even when the signal seems clear — because deeper questioning reveals figures, reasoning, or background that is measurable or actionable.",guidance:"Score exchange pairs: a statement and what the seller asked next. High: digging past clear signals into quantities, causes, stakes or background, yielding numbers or actionable facts. Low: signals accepted at face value. Every accepted-at-face-value opening is a MISS: quote the statement VERBATIM and draft the clarifying question the seller could have asked, in the meeting's dominant language, natural and consultative. Rhetorical or leading questions don't count."},
+      {key:"framing",name:"Framing",definition:"One score, two checkpoints. Opening: the seller deliberately frames the meeting early — intent, purpose, expected outcome. Closing: toward the end, the seller revisits the frame and checks coverage — open questions become actions for a named participant or are deliberately deferred to the next call.",guidance:"OPENING (first ~10%): explicit why-we-are-here, what we'll cover, what a good outcome is; confirmed with the customer scores higher than announced. CLOSING: revisits the frame, checks coverage, sorts open items into actions-with-owners or deliberate deferrals. Next steps alone belong to Control, not here. If either checkpoint is missing, the combined score is at most 6."}
+    ]
+  }
 };
+const craftBand=s=>RUBRIC.sellerCraft.bands.find(b=>s>=b.min&&s<=b.max)||RUBRIC.sellerCraft.bands[0];
 const band = s => RUBRIC.bands.find(b=>s>=b.min&&s<=b.max) || RUBRIC.bands[0];
 
 /* ========================= Transcript parsing ========================== */
@@ -315,14 +328,16 @@ goalPh?`The seller's stated goal for this meeting: ${goalPh}`:"",
 `Write "reasoning" and "verdict" in ${langs[0]==="da"?"Danish":"English"}.`,
 `\n## Dimensions\n${dims}`,
 `\n## Score bands (0-10)\n${bands}`,
+`\n## Seller craft (separate per-meeting skill scores for the SELLER, not the deal)\nBands:\n${RUBRIC.sellerCraft.bands.map(b=>`${b.min}-${b.max} ${b.label}: ${b.desc}`).join("\n")}\n\n${RUBRIC.sellerCraft.metrics.map(m=>`### ${m.name} (key: ${m.key})\nDefinition: ${m.definition}\nGuidance: ${m.guidance}`).join("\n\n")}`,
 `\n## Hard rules
 - Every dimension score above 3 MUST cite 1-3 VERBATIM quotes from the transcript, each with its speaker label. Copy character-for-character; never paraphrase.
 - Content stated by the seller and merely acknowledged by the customer is confidence "seller_assumed"; the same content stated by the customer is "customer_stated". Seller-assumed evidence cannot score above 6.
-- List happy-ears findings: assumptions the seller treated as confirmed that the customer never stated. Also list missed buying signals.`,
+- List happy-ears findings: assumptions the seller treated as confirmed that the customer never stated. Also list missed buying signals.
+- Seller-craft rules: curiosity "misses" must quote the participant's statement VERBATIM and draft the clarifying question the seller could have asked, in the transcript's dominant language, natural and consultative. Framing has two checkpoints (opening, closing); if either is missing, the combined framing score is at most 6.`,
 feedback?`\n## Correction required\n${feedback}`:"",
 `\n## Output
 Respond with ONLY a JSON object, no markdown fences:
-{"dimensions":[{"dimensionKey":string,"score":number,"confidence":"customer_stated"|"seller_assumed","evidence":[{"speaker":string,"text":string}],"reasoning":string}],"happyEars":[{"assumption":string,"reality":string}],"missedSignals":[string],"verdict":string}`,
+{"dimensions":[{"dimensionKey":string,"score":number,"confidence":"customer_stated"|"seller_assumed","evidence":[{"speaker":string,"text":string}],"reasoning":string}],"craft":[{"metricKey":"curiosity","score":number,"reasoning":string,"evidence":[{"speaker":string,"text":string}],"misses":[{"statement":{"speaker":string,"text":string},"suggestedQuestion":string}]},{"metricKey":"framing","score":number,"reasoning":string,"evidence":[{"speaker":string,"text":string}],"misses":[],"checkpoints":[{"name":"opening","present":boolean,"quote":{"speaker":string,"text":string},"note":string},{"name":"closing","present":boolean,"quote":{"speaker":string,"text":string},"note":string}]}],"happyEars":[{"assumption":string,"reality":string}],"missedSignals":[string],"verdict":string}`,
 `\n## Transcript\n${redactedTranscript}`
   ].filter(Boolean).join("\n");
 }
@@ -330,7 +345,12 @@ async function runAnalysis(sampleFn,redactedTranscript,sellerPh,goalPh,langs,onS
   const attempt=async fb=>sampleFn.json(analysisPrompt(redactedTranscript,sellerPh,goalPh,langs,fb));
   onStatus("Scoring the five dimensions…");
   let a=coerceAnalysis(await attempt());
-  const check=x=>{const fails=[];for(const d of x.dimensions||[]){if(d.score>3){if(!d.evidence||!d.evidence.length){fails.push(`${d.dimensionKey}: score ${d.score} with no evidence`);continue;}for(const q of invalidQuotes(redactedTranscript,d.evidence))fails.push(`${d.dimensionKey}: quote not found verbatim: "${q.text}"`);}}return fails;};
+  const check=x=>{const fails=[];
+    for(const c of x.craft||[]){
+      if(c.score>3&&c.evidence.length)for(const q of invalidQuotes(redactedTranscript,c.evidence))fails.push(`craft ${c.metricKey}: quote not found verbatim: "${q.text}"`);
+      for(const m of c.misses||[])if(invalidQuotes(redactedTranscript,[m.statement]).length)fails.push(`craft ${c.metricKey}: miss statement not found verbatim: "${m.statement.text}"`);
+    }
+    for(const d of x.dimensions||[]){if(d.score>3){if(!d.evidence||!d.evidence.length){fails.push(`${d.dimensionKey}: score ${d.score} with no evidence`);continue;}for(const q of invalidQuotes(redactedTranscript,d.evidence))fails.push(`${d.dimensionKey}: quote not found verbatim: "${q.text}"`);}}return fails;};
   let fails=check(a);
   if(fails.length){
     onStatus("Verifying evidence — asking for exact quotes…");
@@ -344,6 +364,12 @@ async function runAnalysis(sampleFn,redactedTranscript,sellerPh,goalPh,langs,onS
         const ok=(d.evidence||[]).filter(q=>!bad.includes(q));
         return ok.length?{...d,evidence:ok}:{...d,score:3,evidence:[],reasoning:(d.reasoning||"")+" [Score capped: cited evidence could not be verified.]"};
       });
+      a.craft=(a.craft||[]).map(c=>{
+        const ev=(c.evidence||[]).filter(q=>!invalidQuotes(redactedTranscript,[q]).length);
+        const misses=(c.misses||[]).filter(m=>!invalidQuotes(redactedTranscript,[m.statement]).length);
+        const score=c.score>3&&!ev.length&&(c.evidence||[]).length?3:c.score;
+        return {...c,evidence:ev,misses,score};
+      });
     }
   }
   return a;
@@ -354,6 +380,10 @@ function deredactAnalysis(a,map){
     dimensions:(a.dimensions||[]).map(d=>({...d,reasoning:un(d.reasoning),evidence:(d.evidence||[]).map(q=>({speaker:un(q.speaker),text:un(q.text)}))})),
     happyEars:(a.happyEars||[]).map(h=>({assumption:un(h.assumption),reality:un(h.reality)})),
     missedSignals:(a.missedSignals||[]).map(un),
+    craft:(a.craft||[]).map(c=>({...c,reasoning:un(c.reasoning),
+      evidence:(c.evidence||[]).map(q=>({speaker:un(q.speaker),text:un(q.text)})),
+      misses:(c.misses||[]).map(m=>({statement:{speaker:un(m.statement.speaker),text:un(m.statement.text)},suggestedQuestion:un(m.suggestedQuestion)})),
+      checkpoints:c.checkpoints?c.checkpoints.map(cp=>({...cp,note:un(cp.note),quote:cp.quote?{speaker:un(cp.quote.speaker),text:un(cp.quote.text)}:undefined})):undefined})),
     verdict:un(a.verdict)};
 }
 
@@ -516,7 +546,7 @@ function viewDeal(){
       </select>
       <button class="danger" onclick="deleteDeal()">Delete deal &amp; all its data</button>
     </div>
-    ${ms.length?`<h2>Where this deal stands</h2><div class="card">${RUBRIC.dimensions.map(dim=>dimBar(dim,scores.find(s=>s.dimensionKey===dim.key))).join("")}</div>`:`<div class="empty">No meetings analyzed yet. Paste your first transcript to see where this deal stands on the five dimensions.</div>`}
+    ${ms.length?`<h2>Where this deal stands</h2><div class="card">${RUBRIC.dimensions.map(dim=>dimBar(dim,scores.find(s=>s.dimensionKey===dim.key))).join("")}${(()=>{const avgs=RUBRIC.sellerCraft.metrics.map(metric=>{const sc=ms.map(m=>((m.analysis.craft||[]).find(c=>c.metricKey===metric.key)||{}).score).filter(s=>typeof s==="number");return sc.length?`${metric.name} ${(sc.reduce((a,b)=>a+b,0)/sc.length).toFixed(1)}/10`:null;}).filter(Boolean);return avgs.length?`<p class="deal-meta" style="margin:14px 0 0;border-top:1px solid var(--line);padding-top:12px">Your craft across this deal's meetings: ${avgs.join(" · ")} — skill trend, not deal state.</p>`:"";})()}</div>`:`<div class="empty">No meetings analyzed yet. Paste your first transcript to see where this deal stands on the five dimensions.</div>`}
     ${d.prepPack?renderPrep(d.prepPack):""}
     ${ms.length?`<h2>Meetings</h2>${meetings}`:""}`;
 }
@@ -673,6 +703,18 @@ function viewMeeting(){
         ${(d.evidence||[]).map(q=>`<div class="quote"><b>${escH(q.speaker)}:</b> “${escH(q.text)}”</div>`).join("")}
       </div>`;}).join("")}
     </div>
+    ${(a.craft||[]).length?`<h2>Your craft this meeting</h2><p class="sub">How you worked the conversation — separate from the deal's health, trended over time.</p><div class="card">${a.craft.map(c=>{
+      const metric=RUBRIC.sellerCraft.metrics.find(m=>m.key===c.metricKey);
+      const b=craftBand(c.score);const cls=c.score<=3?"band-low":c.score<=6?"band-mid":c.score<=8?"band-high":"band-top";
+      return `<div class="dim ${cls}">
+        <div class="head"><span class="name">${escH(metric?metric.name:c.metricKey)}</span>
+          <span class="row" style="gap:8px"><span class="tag">${escH(b.label)}</span><span class="score">${c.score}<small style="font-size:.7em;color:var(--muted)">/10</small></span></span></div>
+        <div class="bar"><i style="width:${c.score*10}%"></i></div>
+        ${(c.checkpoints||[]).map(cp=>`<p style="margin:8px 0 2px">${cp.present?"✓":"✗"} <b>${cp.name==="opening"?"Opening frame":"Closing re-frame"}</b>${cp.note?` — ${escH(cp.note)}`:""}</p>${cp.quote?`<div class="quote"><b>${escH(cp.quote.speaker)}:</b> “${escH(cp.quote.text)}”</div>`:""}`).join("")}
+        <p style="margin:8px 0 4px">${escH(c.reasoning)}</p>
+        ${(c.evidence||[]).map(q=>`<div class="quote"><b>${escH(q.speaker)}:</b> “${escH(q.text)}”</div>`).join("")}
+        ${(c.misses||[]).length?`<h3 style="margin:14px 0 6px">Openings you left on the table</h3>${c.misses.map(m=>`<div class="he"><div class="quote" style="margin-top:0"><b>${escH(m.statement.speaker)}:</b> “${escH(m.statement.text)}”</div><b>Ask next time:</b> ${escH(m.suggestedQuestion)}</div>`).join("")}`:""}
+      </div>`;}).join("")}</div>`:""}
     ${(a.happyEars||[]).length?`<h2>Happy ears</h2><p class="sub">Things treated as settled that the customer never actually said.</p>${a.happyEars.map(h=>`<div class="he"><b>You assumed:</b> ${escH(h.assumption)}<br><b>What was said:</b> ${escH(h.reality)}</div>`).join("")}`:""}
     ${(a.missedSignals||[]).length?`<h2>Signals you may have missed</h2><ul class="clean">${a.missedSignals.map(s=>`<li>${escH(s)}</li>`).join("")}</ul>`:""}
     <details><summary>Transcript (stored with this meeting)</summary><div class="redline" style="margin-top:10px">${escH(m.transcript)}</div></details>`;

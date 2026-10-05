@@ -35,6 +35,13 @@ Two mechanics do most of the coaching work:
 
 Deal-level scores carry the best verified evidence to date, with staleness decay: evidence not reconfirmed within two meetings drops a band, because deals go stale quietly.
 
+Alongside the five deal dimensions, rubric v2 scores two **seller craft** metrics per meeting — your skill, never merged into deal state, trended over time:
+
+| Craft metric | What gets scored |
+| --- | --- |
+| **Curiosity** | Clarifying questions to statements — staying curious even when the signal seems clear, because digging reveals figures, reasoning or background that is measurable or actionable. Every opening accepted at face value is recorded as a miss, with the question you could have asked. |
+| **Framing** | One score, two checkpoints: a deliberate opening frame (intent, purpose, expected outcome, early in the call) and a closing re-frame (coverage check; open questions become actions with owners or deliberate deferrals). A missing checkpoint caps the score at 6. |
+
 ## Try it
 
 Requirements: Node.js 22+, an Anthropic API key.

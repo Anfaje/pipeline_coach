@@ -27,6 +27,14 @@ const buildPrompt = (
   const bands = rubric.bands
     .map((b) => `${b.min}-${b.max} ${b.label}: ${b.description}`)
     .join("\n");
+  const craft = rubric.sellerCraft;
+  const craftSection = craft
+    ? `\n## Seller craft (separate per-meeting skill scores for the SELLER, not the deal)\nBands:\n${craft.bands
+        .map((b) => `${b.min}-${b.max} ${b.label}: ${b.description}`)
+        .join("\n")}\n\n${craft.metrics
+        .map((m) => `### ${m.name} (key: ${m.key})\nDefinition: ${m.definition}\nGuidance: ${m.analysisGuidance}`)
+        .join("\n\n")}`
+    : "";
 
   const undiarized = [...new Set(meeting.transcript.match(/^Speaker\s*-?\d+(?=:)/gmu) ?? [])];
   return [
@@ -38,14 +46,22 @@ const buildPrompt = (
     meeting.sellerGoal ? `The seller's stated goal for this meeting: ${meeting.sellerGoal}` : "",
     `\n## Dimensions\n${dims}`,
     `\n## Score bands (0-10)\n${bands}`,
+    craftSection,
     `\n## Hard rules`,
     `- Every dimension score above 3 MUST cite 1-3 VERBATIM quotes from the transcript, each with its speaker label. Copy quotes character-for-character; never paraphrase.`,
     `- A statement made by the seller and merely acknowledged by the customer is confidence "seller_assumed"; the same content stated by the customer is "customer_stated". Seller-assumed evidence cannot score above 6.`,
     `- Also list happy-ears findings (assumptions the seller treated as confirmed that the customer never stated) and missed buying signals.`,
+    craft
+      ? `- Seller-craft rules: curiosity "misses" must quote the participant's statement VERBATIM and draft the clarifying question the seller could have asked, in the transcript's dominant language, natural and consultative. Framing has two checkpoints (opening, closing); if either is missing, the combined framing score is at most 6. Craft evidence quotes follow the same verbatim rule.`
+      : "",
     correctionFeedback ? `\n## Correction required\n${correctionFeedback}` : "",
     `\n## Output`,
     `Respond with ONLY a JSON object, no markdown fences, matching:`,
-    `{"dimensions":[{"dimensionKey":string,"score":number,"confidence":"customer_stated"|"seller_assumed","evidence":[{"speaker":string,"text":string}],"reasoning":string}],"happyEars":[{"assumption":string,"reality":string}],"missedSignals":[string],"verdict":string}`,
+    `{"dimensions":[{"dimensionKey":string,"score":number,"confidence":"customer_stated"|"seller_assumed","evidence":[{"speaker":string,"text":string}],"reasoning":string}],${
+      craft
+        ? `"craft":[{"metricKey":"curiosity","score":number,"reasoning":string,"evidence":[{"speaker":string,"text":string}],"misses":[{"statement":{"speaker":string,"text":string},"suggestedQuestion":string}]},{"metricKey":"framing","score":number,"reasoning":string,"evidence":[{"speaker":string,"text":string}],"misses":[],"checkpoints":[{"name":"opening","present":boolean,"quote":{"speaker":string,"text":string},"note":string},{"name":"closing","present":boolean,"quote":{"speaker":string,"text":string},"note":string}]}],`
+        : ""
+    }"happyEars":[{"assumption":string,"reality":string}],"missedSignals":[string],"verdict":string}`,
     `\n## Transcript\n${meeting.transcript}`,
   ]
     .filter(Boolean)

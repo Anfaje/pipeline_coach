@@ -41,3 +41,40 @@ describe("coerceMeetingAnalysis", () => {
     expect(a.verdict).toBe("");
   });
 });
+
+describe("seller craft (rubric v2)", async () => {
+  const rubric2 = (await import("../rubric/healthy-pipeline.v2.json")).default as Rubric;
+  const ids2 = { meetingId: "m1", rubric: rubric2 };
+
+  it("coerces craft findings incl. misses and checkpoints, fills missing metrics", () => {
+    const a = coerceMeetingAnalysis({
+      dimensions: [],
+      craft: [{
+        metricKey: "curiosity", score: "7",
+        evidence: [{ speaker: "J", text: "hvor meget tid taler vi om?" }],
+        misses: [{ statement: { speaker: "M", text: "det koster os tid" }, suggestedQuestion: "Hvor meget tid om ugen?" }],
+        reasoning: "r",
+      }],
+    }, ids2);
+    expect(a.craft).toHaveLength(2);
+    const cur = a.craft!.find((c) => c.metricKey === "curiosity")!;
+    expect(cur.score).toBe(7);
+    expect(cur.misses[0]!.suggestedQuestion).toContain("Hvor meget");
+    expect(a.craft!.find((c) => c.metricKey === "framing")!.score).toBe(0);
+  });
+
+  it("coerces string-shaped misses and bad checkpoint names (drift)", () => {
+    const a = coerceMeetingAnalysis({
+      dimensions: [],
+      craft: [{ metricKey: "framing", score: 8, reasoning: "r", evidence: [],
+        checkpoints: [{ name: "start", present: "yes", note: { text: "framed clearly" } }] }],
+    }, ids2);
+    const fr = a.craft!.find((c) => c.metricKey === "framing")!;
+    expect(fr.checkpoints![0]).toMatchObject({ name: "opening", present: true, note: "framed clearly" });
+  });
+
+  it("omits craft entirely for rubric v1 (no sellerCraft section)", () => {
+    const a = coerceMeetingAnalysis({ dimensions: [], craft: [{ metricKey: "curiosity", score: 9 }] }, ids);
+    expect(a.craft).toBeUndefined();
+  });
+});

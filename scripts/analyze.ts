@@ -9,7 +9,7 @@
  *   --goal "<text>"      the seller's goal for this meeting (optional context)
  */
 import { readFileSync } from "node:fs";
-import rubricJson from "../src/rubric/healthy-pipeline.v1.json";
+import rubricJson from "../src/rubric/healthy-pipeline.v2.json";
 import { analyzeMeeting } from "../src/core/analyze.js";
 import { decodeTranscript } from "../src/core/encoding.js";
 import { parseTranscript, toCanonicalText } from "../src/core/transcriptParser.js";
@@ -102,6 +102,27 @@ for (const d of analysis.dimensions) {
   console.log(`${(dim?.name ?? d.dimensionKey).padEnd(8)} ${String(d.score).padStart(2)}/10  (${d.confidence})`);
   for (const q of d.evidence) console.log(`         ↳ ${q.speaker}: "${q.text}"`);
   console.log(`         ${d.reasoning}\n`);
+}
+if (analysis.craft?.length) {
+  console.log("Seller craft (your skill this meeting, separate from the deal):");
+  for (const c of analysis.craft) {
+    const metric = rubric.sellerCraft?.metrics.find((m) => m.key === c.metricKey);
+    console.log(`${(metric?.name ?? c.metricKey).padEnd(10)} ${String(c.score).padStart(2)}/10`);
+    for (const cp of c.checkpoints ?? []) {
+      console.log(`           ${cp.present ? "✓" : "✗"} ${cp.name}${cp.note ? ` — ${cp.note}` : ""}`);
+      if (cp.quote) console.log(`             ↳ ${cp.quote.speaker}: "${cp.quote.text}"`);
+    }
+    for (const q of c.evidence) console.log(`           ↳ ${q.speaker}: "${q.text}"`);
+    console.log(`           ${c.reasoning}`);
+    if (c.misses.length) {
+      console.log(`           Openings you left on the table:`);
+      for (const m of c.misses) {
+        console.log(`           · ${m.statement.speaker}: "${m.statement.text}"`);
+        console.log(`             → ask: ${m.suggestedQuestion}`);
+      }
+    }
+    console.log("");
+  }
 }
 if (analysis.happyEars.length) {
   console.log("Happy ears:");

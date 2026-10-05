@@ -13,6 +13,18 @@ const UNEVIDENCED_CAP = 3; // "No quote, no score above 3."
 
 function findInvalid(meeting: Meeting, analysis: MeetingAnalysis): string[] {
   const failures: string[] = [];
+  for (const c of analysis.craft ?? []) {
+    if (c.score > UNEVIDENCED_CAP && c.evidence.length > 0) {
+      for (const q of validateQuotes(meeting.transcript, c.evidence).invalidQuotes) {
+        failures.push(`craft ${c.metricKey}: quote not found in transcript: "${q.text}"`);
+      }
+    }
+    for (const m of c.misses) {
+      if (validateQuotes(meeting.transcript, [m.statement]).invalidQuotes.length) {
+        failures.push(`craft ${c.metricKey}: miss statement not found verbatim: "${m.statement.text}"`);
+      }
+    }
+  }
   for (const dim of analysis.dimensions) {
     if (dim.score > UNEVIDENCED_CAP) {
       if (dim.evidence.length === 0) {
@@ -48,7 +60,19 @@ function capUnevidenced(
       reasoning: `${dim.reasoning} [Score capped: cited evidence could not be verified in the transcript.]`,
     };
   });
-  return { ...analysis, dimensions, degraded: true };
+  const craft = (analysis.craft ?? []).map((c) => {
+    const evidence = c.evidence.filter(
+      (q) => !validateQuotes(meeting.transcript, [q]).invalidQuotes.length,
+    );
+    const misses = c.misses.filter(
+      (m) => !validateQuotes(meeting.transcript, [m.statement]).invalidQuotes.length,
+    );
+    const score = c.score > UNEVIDENCED_CAP && evidence.length === 0 && c.evidence.length > 0
+      ? UNEVIDENCED_CAP
+      : c.score;
+    return { ...c, evidence, misses, score };
+  });
+  return { ...analysis, dimensions, ...(analysis.craft ? { craft } : {}), degraded: true };
 }
 
 export async function analyzeMeeting(

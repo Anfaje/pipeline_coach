@@ -1,5 +1,6 @@
 import type {
   ConfidenceFlag,
+  CraftFinding,
   DimensionAnalysis,
   EvidenceQuote,
   HappyEarsFinding,
@@ -55,6 +56,32 @@ const happy = (v: unknown): HappyEarsFinding => {
   return { assumption: str(o.assumption ?? o.text), reality: str(o.reality ?? o.whatWasSaid) };
 };
 
+const craftFinding = (v: unknown): CraftFinding => {
+  const x = (v ?? {}) as Record<string, unknown>;
+  const checkpoints = Array.isArray(x.checkpoints)
+    ? x.checkpoints.map((c) => {
+        const o = (c ?? {}) as Record<string, unknown>;
+        return {
+          name: (o.name === "closing" ? "closing" : "opening") as "opening" | "closing",
+          present: Boolean(o.present),
+          quote: o.quote ? quote(o.quote) : undefined,
+          note: str(o.note),
+        };
+      })
+    : undefined;
+  return {
+    metricKey: str(x.metricKey ?? x.key ?? x.metric),
+    score: num(x.score),
+    reasoning: str(x.reasoning),
+    evidence: (Array.isArray(x.evidence) ? x.evidence : []).map(quote).filter((q) => q.text),
+    misses: (Array.isArray(x.misses) ? x.misses : []).map((m) => {
+      const o = (m ?? {}) as Record<string, unknown>;
+      return { statement: quote(o.statement ?? m), suggestedQuestion: str(o.suggestedQuestion ?? o.question) };
+    }).filter((m) => m.statement.text),
+    ...(checkpoints ? { checkpoints } : {}),
+  };
+};
+
 export function coerceMeetingAnalysis(
   raw: unknown,
   ids: { meetingId: string; rubric: Rubric },
@@ -83,10 +110,21 @@ export function coerceMeetingAnalysis(
       });
     }
   }
+  const craft: CraftFinding[] | undefined = ids.rubric.sellerCraft
+    ? (Array.isArray(o.craft) ? o.craft : []).map(craftFinding)
+    : undefined;
+  if (craft && ids.rubric.sellerCraft) {
+    for (const metric of ids.rubric.sellerCraft.metrics) {
+      if (!craft.some((c) => c.metricKey === metric.key)) {
+        craft.push({ metricKey: metric.key, score: 0, reasoning: "Not assessed in the model's response.", evidence: [], misses: [] });
+      }
+    }
+  }
   return {
     meetingId: ids.meetingId,
     rubricId: ids.rubric.id,
     rubricVersion: ids.rubric.version,
+    ...(craft ? { craft } : {}),
     dimensions,
     happyEars: (Array.isArray(o.happyEars) ? o.happyEars : []).map(happy).filter((h) => h.assumption),
     missedSignals: (Array.isArray(o.missedSignals) ? o.missedSignals : []).map(str).filter(Boolean),

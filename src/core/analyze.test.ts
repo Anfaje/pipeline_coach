@@ -92,3 +92,34 @@ describe("analyzeMeeting pipeline", () => {
     expect(result.dimensions[0]!.evidence).toHaveLength(1);
   });
 });
+
+describe("craft quote validation", async () => {
+  const rubric2 = (await import("../rubric/healthy-pipeline.v2.json")).default as Rubric;
+  const craftAnalysis = (missText: string): MeetingAnalysis => ({
+    ...base, rubricVersion: rubric2.version,
+    dimensions: [],
+    craft: [{ metricKey: "curiosity", score: 8, reasoning: "r",
+      evidence: [{ speaker: "Mads", text: "Vi taber to uger per projekt." }],
+      misses: [{ statement: { speaker: "Mads", text: missText }, suggestedQuestion: "Hvor meget?" }] }],
+  });
+
+  it("retries when a miss statement is not verbatim, keeps the valid retry", async () => {
+    const provider = new MockProvider([
+      craftAnalysis("vi mister masser af tid"),            // fabricated paraphrase
+      craftAnalysis("Vi taber to uger per projekt."),      // verbatim
+    ]);
+    const result = await analyzeMeeting(provider, rubric2, meeting);
+    expect(provider.calls).toHaveLength(2);
+    expect(result.degraded).toBeUndefined();
+    expect(result.craft![0]!.misses).toHaveLength(1);
+  });
+
+  it("drops unverifiable misses (not the score) when retry also fails", async () => {
+    const bad = craftAnalysis("fabricated statement");
+    const provider = new MockProvider([bad, bad]);
+    const result = await analyzeMeeting(provider, rubric2, meeting);
+    expect(result.degraded).toBe(true);
+    expect(result.craft![0]!.misses).toHaveLength(0);
+    expect(result.craft![0]!.score).toBe(8); // evidence itself was verbatim
+  });
+});

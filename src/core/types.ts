@@ -24,6 +24,44 @@ export interface RubricDimension {
   lowExample: string;
 }
 
+export interface CraftBand {
+  min: number;
+  max: number;
+  label: string;
+  description: string;
+}
+
+export interface CraftMetric {
+  key: string;
+  name: string;
+  definition: string;
+  analysisGuidance: string;
+}
+
+export interface CuriosityMiss {
+  /** Verbatim participant statement the seller accepted at face value. */
+  statement: EvidenceQuote;
+  /** The clarifying question the seller could have asked (meeting's language). */
+  suggestedQuestion: string;
+}
+
+export interface CraftCheckpoint {
+  name: "opening" | "closing";
+  present: boolean;
+  quote?: EvidenceQuote;
+  note: string;
+}
+
+/** Per-meeting seller-skill finding. Never merged into deal state. */
+export interface CraftFinding {
+  metricKey: string;
+  score: number;
+  reasoning: string;
+  evidence: EvidenceQuote[];
+  misses: CuriosityMiss[];
+  checkpoints?: CraftCheckpoint[];
+}
+
 export interface Rubric {
   id: string;
   version: string;
@@ -37,6 +75,12 @@ export interface Rubric {
   };
   bands: RubricBand[];
   dimensions: RubricDimension[];
+  /** Optional per-meeting seller-skill section (rubric >= 2.0.0). */
+  sellerCraft?: {
+    note?: string;
+    bands: CraftBand[];
+    metrics: CraftMetric[];
+  };
 }
 
 export interface EvidenceQuote {
@@ -67,6 +111,8 @@ export interface MeetingAnalysis {
   dimensions: DimensionAnalysis[];
   happyEars: HappyEarsFinding[];
   missedSignals: string[];
+  /** Seller-craft findings (rubric >= 2.0.0); absent on older analyses. */
+  craft?: CraftFinding[];
   verdict: string;
   /** Set when quote validation failed even after retry; affected scores were capped. */
   degraded?: boolean;

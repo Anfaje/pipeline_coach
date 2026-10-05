@@ -79,8 +79,31 @@ export class RedactingProvider implements AnalysisProvider {
     });
 
     const un = (s: string) => unredactText(s, map);
+    const unQuote = (q: { speaker: string; text: string }) => ({ speaker: un(q.speaker), text: un(q.text) });
     return {
       ...result,
+      ...(result.craft
+        ? {
+            craft: result.craft.map((c) => ({
+              ...c,
+              reasoning: un(c.reasoning),
+              evidence: c.evidence.map(unQuote),
+              misses: c.misses.map((m) => ({
+                statement: unQuote(m.statement),
+                suggestedQuestion: un(m.suggestedQuestion),
+              })),
+              ...(c.checkpoints
+                ? {
+                    checkpoints: c.checkpoints.map((cp) => ({
+                      ...cp,
+                      note: un(cp.note),
+                      ...(cp.quote ? { quote: unQuote(cp.quote) } : {}),
+                    })),
+                  }
+                : {}),
+            })),
+          }
+        : {}),
       dimensions: result.dimensions.map((d) => ({
         ...d,
         reasoning: un(d.reasoning),

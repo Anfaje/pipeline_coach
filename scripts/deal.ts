@@ -2,7 +2,7 @@
  * Show the merged state of a locally stored deal, or list deals.
  *   npm run deal -- <name>     npm run deal
  */
-import rubricJson from "../src/rubric/healthy-pipeline.v1.json";
+import rubricJson from "../src/rubric/healthy-pipeline.v2.json";
 import { listDeals, loadDeal } from "../src/core/dealStore.js";
 import { renderDealState } from "../src/core/renderDeal.js";
 import type { Rubric } from "../src/core/types.js";
