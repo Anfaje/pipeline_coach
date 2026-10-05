@@ -28,9 +28,13 @@ const buildPrompt = (
     .map((b) => `${b.min}-${b.max} ${b.label}: ${b.description}`)
     .join("\n");
 
+  const undiarized = [...new Set(meeting.transcript.match(/^Speaker\s*-?\d+(?=:)/gmu) ?? [])];
   return [
     `You are a sales coach scoring one meeting transcript against the "${rubric.name}" framework (rubric version ${rubric.version}).`,
     `The seller is the speaker labeled "${meeting.sellerSpeaker}". The transcript may be in Danish, English, or mixed; analyze in whatever language the content is in, and write reasoning/verdict in the transcript's dominant language.`,
+    undiarized.length
+      ? `Attribution warning: lines labeled ${undiarized.join(", ")} could not be attributed to a person by the recorder. Content there is UNATTRIBUTED: it can never count as customer-stated evidence, and any score leaning on it must use confidence "seller_assumed". Mention in the reasoning when this limits a score.`
+      : "",
     meeting.sellerGoal ? `The seller's stated goal for this meeting: ${meeting.sellerGoal}` : "",
     `\n## Dimensions\n${dims}`,
     `\n## Score bands (0-10)\n${bands}`,

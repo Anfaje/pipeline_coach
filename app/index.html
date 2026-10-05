@@ -310,6 +310,7 @@ function analysisPrompt(redactedTranscript,sellerPh,goalPh,langs,feedback){
 `You are a sales coach scoring one meeting transcript against "The Healthy Pipeline" framework (Pain, Power, Vision, Value, Control).`,
 `Privacy note: names and companies in the transcript were replaced with placeholders like PERSON_1 or COMPANY_1. Treat placeholders as the people/organizations they stand for and copy them verbatim where needed.`,
 `The seller is the speaker labeled "${sellerPh}".`,
+(redactedTranscript.match(/^Speaker\s*-?\d+(?=:)/gm)||[]).length?`Attribution warning: lines labeled ${[...new Set(redactedTranscript.match(/^Speaker\s*-?\d+(?=:)/gm))].join(", ")} could not be attributed to a person by the recorder. Content there is UNATTRIBUTED: it can never count as customer-stated evidence, and any score leaning on it must use confidence "seller_assumed". Mention in the reasoning when this limits a score.`:"",
 goalPh?`The seller's stated goal for this meeting: ${goalPh}`:"",
 `Write "reasoning" and "verdict" in ${langs[0]==="da"?"Danish":"English"}.`,
 `\n## Dimensions\n${dims}`,
